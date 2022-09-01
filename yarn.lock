@@ -6773,6 +6773,10 @@ wcwidth@^1.0.1:
   dependencies:
     defaults "^1.0.3"
 
+"web-worker@git+https://github.com/msikma/web-worker.git#34b078898fa3986e7cf8a3ac57c4eaa0caa26211":
+  version "1.2.0"
+  resolved "git+https://github.com/msikma/web-worker.git#34b078898fa3986e7cf8a3ac57c4eaa0caa26211"
+
 webidl-conversions@^3.0.0:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/webidl-conversions/-/webidl-conversions-3.0.1.tgz#24534275e2a7bc6be7bc86611cc16ae0a5654871"

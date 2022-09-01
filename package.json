@@ -41,6 +41,11 @@
   ],
   "exports": {
     "./package.json": "./package.json",
+    "./browser": "./dist/adapters/browser/index.js",
+    "./cordova": "./dist/adapters/cordova-sqlite-storage/index.js",
+    "./expo": "./dist/adapters/expo-sqlite/index.js",
+    "./node": "./dist/adapters/better-sqlite3/index.js",
+    "./react-native": "./dist/adapters/react-native-sqlite-storage/index.js",
     ".": "./dist/index.js",
     "./*": "./dist/*/index.js"
   },
@@ -71,17 +76,15 @@
     "walkjs": "^3.2.4"
   },
   "devDependencies": {
+    "@capacitor-community/sqlite": ">= 3.0.0",
     "@tsmodule/tsmodule": "^40.0.17",
     "@types/node": "^18.7.13",
     "@typescript-eslint/eslint-plugin": "^5.34.0",
     "@typescript-eslint/parser": "^5.34.0",
     "ava": "^4.3.1",
-    "eslint": "^8.22.0",
-    "typescript": "^4.7.4",
-
-    "@capacitor-community/sqlite": ">= 3.0.0",
     "better-sqlite3": ">= 7.4.0",
     "cordova-sqlite-storage": ">= 5.0.0",
+    "eslint": "^8.22.0",
     "expo-asset": ">= 8.0.0",
     "expo-file-system": "13.0.0",
     "expo-sqlite": ">= 10.0.0",
@@ -91,6 +94,8 @@
     "react-native-sqlite-storage": ">= 6.0.0",
     "sql.js": ">= 1.6.0",
     "sqlite3": ">= 5.0.0",
-    "typeorm": ">=0.3.0"
+    "typeorm": ">=0.3.0",
+    "typescript": "^4.7.4",
+    "web-worker": "git+https://github.com/msikma/web-worker.git#34b078898fa3986e7cf8a3ac57c4eaa0caa26211"
   }
 }

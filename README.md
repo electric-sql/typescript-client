@@ -5,7 +5,7 @@
 
 [Electric SQL](https://electric-sql.com) is a local-first SQL system. It provides active-active cloud sync for embedded SQLite databases and a reactive programming model to bind components to live database queries.
 
-The Electric SQL Typescript Client is the main Electric SQL client library for developing node, web and JavaScript-based mobile applications. It's designed to work with *any* SQLite driver or bindings, with convienience functions to integrate with the most popular ones, including the primary drivers for [React Native](#docs), [Expo](#docs), [Cordova](#docs), [Capacitor](#docs), [SQL.js](#docs) (with [absurd-sql](#docs)), Node (both [node-sqlite3](#docs) and [better-sqlite3](#docs)), [TypeORM](#docs) and [Prisma](#docs).
+The Electric SQL Typescript Client is the main Electric SQL client library for developing node, web and JavaScript-based mobile applications. It's designed to work with *any* SQLite driver or bindings, with convienience functions to integrate with the most popular ones, including the primary drivers for [Cordova](#docs), [Expo](#docs), [React Native](#docs), [SQL.js](#docs) (with [absurd-sql](#docs)), [Node.js](#) (via [better-sqlite3](#docs)), [TypeORM](#docs) and [Prisma](#docs).
 
 ## Install
 
@@ -30,6 +30,8 @@ import { electrify } from 'electric-sql'
 
 // Instantiate your SQLite driver.
 import SQLite from 'react-native-sqlite-storage'
+
+// Optionally enable the promise API.
 SQLite.enablePromise(true)
 
 // Open a database connection and electrify it.
@@ -40,26 +42,50 @@ SQLite.openDatabase('example.db')
   })
 ```
 
-We also provide an `initElectricSqlJs` function to instantiate a persistent, electrified database in the browser, using [SQL.js](#docs) with [absurd-sql](#docs). This creates a database instance that provides the same API as the default SQL.js driver but actually bootstraps and communicates with a web worker process running absurd-sql in the background.
+### Browser
+
+Electric uses [SQL.js](#) in the browser with [absurd-sql](#) for persistence. This
+must be run in a web worker, so initialisation in the browser involves creating and
+electrifying a web worker per database. (It's also helpful to keep the background
+replication process off the main thread).
+
+First create a `worker.js` file that imports and starts an ElectricWorker process:
 
 ```js
-// Use instead of the default `initSqlJs` from SQL.js.
-import { makeElectric, initElectricSqlJs } from 'electric-sql/browser'
+// worker.js
+import { ElectricWorker } from 'electric-sql/browser'
 
-// Initialise a persistent, electrified SQL.js database.
-initElectricSqlJs({locateFile: file => `/${file}`})
-  .then(SQL => makeElectric(SQL, 'example.db'))
+ElectricWorker.start()
+```
+
+Then, in your main application:
+
+```js
+import { initElectricSqlJs } from 'electric-sql/browser'
+
+// Start the background worker.
+const url = new URL('./worker.js', import.meta.url)
+const worker = new Worker(url, {type: "module"})
+
+// Initialise an electrified database client, passing in the same
+// `{locateFile: ...}` options as for the default SQL.js client.
+initElectricSqlJs(worker, {locateFile: file => `/${file}`})
+  .then(SQL => new SQL.Database('example.db'))
   .then(db => { // Use as normal, e.g.:
     db.exec('SELECT 1')
   })
 ```
+
+Note that the path to the worker.js must be relative and the worker.js file
+must survive any build / bundling process. This is handled automatically by
+most bundlers, including Esbuild (as of [#2508](https://github.com/evanw/esbuild/pull/2508)), Rollup and Webpack.
 
 See the [usage documentation](https://electric-sql.com/docs/guides/usage) for:
 
 - [target environment and driver specific instructions](https://electric-sql.com/docs/guides/usage#targets-and-drivers)
 - [generic instructions for integrating *any* driver](https://electric-sql.com/docs/guides/client-usage#generic-drivers)
 
-## Reactivity
+### Reactivity
 
 Once electrified, you can bind database queries to your reactive components, so they automatically re-query and (if necessary) re-render when the underlying data changes.
 

@@ -28,10 +28,8 @@ The general principle is that you instantiate and use your SQLite driver as norm
 ```js
 import { electrify } from 'electric-sql'
 
-// Instantiate your SQLite driver.
+// Import your SQLite driver.
 import SQLite from 'react-native-sqlite-storage'
-
-// Optionally enable the promise API.
 SQLite.enablePromise(true)
 
 // Open a database connection and electrify it.
@@ -45,9 +43,9 @@ SQLite.openDatabase('example.db')
 ### Browser
 
 Electric uses [SQL.js](#) in the browser with [absurd-sql](#) for persistence. This
-must be run in a web worker, so initialisation in the browser involves creating and
-electrifying a web worker per database. (It's also helpful to keep the background
-replication process off the main thread).
+runs in a web worker (which we also use to keep background replication off the main
+thread). As a result, the electrified db client provides an asynchronous version of
+a subset of the SQL.js driver interface.
 
 First create a `worker.js` file that imports and starts an ElectricWorker process:
 
@@ -55,7 +53,7 @@ First create a `worker.js` file that imports and starts an ElectricWorker proces
 // worker.js
 import { ElectricWorker } from 'electric-sql/browser'
 
-ElectricWorker.start()
+ElectricWorker.start(self)
 ```
 
 Then, in your main application:
@@ -67,14 +65,16 @@ import { initElectricSqlJs } from 'electric-sql/browser'
 const url = new URL('./worker.js', import.meta.url)
 const worker = new Worker(url, {type: "module"})
 
-// Initialise an electrified database client, passing in the same
-// `{locateFile: ...}` options as for the default SQL.js client.
+// Electrify the SQL.js / absurd-sql machinery and then open
+// a persistent, named database.
 initElectricSqlJs(worker, {locateFile: file => `/${file}`})
-  .then(SQL => new SQL.Database('example.db'))
-  .then(db => { // Use as normal, e.g.:
-    db.exec('SELECT 1')
-  })
+  .then(SQL => SQL.openDatabase('example.db'))
+  .then(db => db.exec('SELECT 1'))
 ```
+
+This gives you persistent, local-first SQL with active-active replication
+in your web browser 🤯. Use the db client as normal, with the proviso that
+the methods are now async (they return promises rather than direct values).
 
 Note that the path to the worker.js must be relative and the worker.js file
 must survive any build / bundling process. This is handled automatically by

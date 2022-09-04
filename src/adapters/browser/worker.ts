@@ -1,71 +1,79 @@
-import { Request, Response } from './client'
+import initSqlJs from '@jlongster/sql.js'
+import { SQLiteFS } from 'absurd-sql'
+import IndexedDBBackend from 'absurd-sql/dist/indexeddb-backend'
+
+import { DEFAULTS } from '../../electric/config'
+import { ElectricNamespace, ElectrifyOptions } from '../../electric/index'
+import { BrowserFilesystem } from '../../filesystems/browser'
+import { EmitCommitNotifier } from '../../notifiers/emit'
+import { globalRegistry } from '../../satellite/registry'
+import { DbName } from '../../util/types'
+
+import { BaseWorkerServer, RequestError } from './bridge'
+import { ElectricDatabase } from './database'
 import { WasmLocator } from './locator'
+import { QueryAdapter } from './query'
+import { SatelliteDatabaseAdapter } from './satellite'
 
 // Avoid garbage collection.
 const refs = []
 
-// This is the primary wrapped database client that runs in the
-// worker thread, using SQL.js with absurd-sql.
-class ElectricDatabase {
-  async init(locatorPattern: string): Promise<void> {
-    const locateFileFn = WasmLocator.deserialise(locatorPattern)
-
-    console.log('XXX ready to initSqljs', {locateFile: locateFileFn})
-  }
-}
-
 // Runs in the worker thread and handles the communication with the
 // `ElectricDatabase`, mapping postMessages to db method calls.
-export class ElectricWorker {
-  db: ElectricDatabase
-  worker: Worker
+export class ElectricWorker extends BaseWorkerServer {
+  async init(locatorPattern: string): Promise<boolean> {
+    const locateFileFn = WasmLocator.deserialise(locatorPattern)
 
-  constructor(db: ElectricDatabase, worker: Worker) {
-    this.db = db
-    this.worker = worker
-    this.worker.addEventListener('message', this.handleCall.bind(this))
+    const SQL = await initSqlJs({ locateFile: locateFileFn })
+    const sqlFS = new SQLiteFS(SQL.FS, new IndexedDBBackend())
+
+    SQL.register_for_idb(sqlFS)
+
+    SQL.FS.mkdir('/electric-sql')
+    SQL.FS.mount(sqlFS, {}, '/electric-sql')
+
+    this.SQL = SQL
+
+    return true
   }
 
-  async handleCall(event: MessageEvent) {
-    const data = event.data as Request
-    const { requestId, method, args } = data
-
-    try {
-      const dbFn = Reflect.get(this.db, method)
-      const result = await dbFn.apply(this.db, args)
-
-      this.dispatchResult(requestId, result)
+  async open(dbName: DbName): Promise<boolean> {
+    if (this.SQL === undefined) {
+      throw new RequestError(400, 'Must init before opening')
     }
-    catch (err) {
-      this.dispatchError(requestId, err)
+
+    const SQL = this.SQL
+    const path = `/electric-sql/${dbName}`
+
+    if (typeof SharedArrayBuffer === 'undefined') {
+      const stream = SQL.FS.open(path, 'a+')
+      await stream.node.contents.readIfFallback()
+      SQL.FS.close(stream)
     }
+
+    const db = new SQL.Database(path, {filename: true})
+    db.exec(`PRAGMA journal_mode=MEMORY; PRAGMA page_size=8192;`)
+
+    const opts = this.opts
+    const defaultNamespace = opts.defaultNamespace || DEFAULTS.namespace
+    const commitNotifier = opts.commitNotifier || new EmitCommitNotifier(dbName)
+    const fs = opts.filesystem || new BrowserFilesystem()
+    const queryAdapter = opts.queryAdapter || new QueryAdapter(db, defaultNamespace)
+    const satelliteDbAdapter = opts.satelliteDbAdapter || new SatelliteDatabaseAdapter(db)
+    const satelliteRegistry = opts.satelliteRegistry || globalRegistry
+
+    const namespace = new ElectricNamespace(commitNotifier, queryAdapter)
+    this.db = new ElectricDatabase(db, namespace, this.worker.user_defined_functions)
+
+    await satelliteRegistry.ensureStarted(dbName, satelliteDbAdapter, fs)
+
+    return true
   }
 
-  dispatchError(requestId: string, error: any) {
-    const resp: Response = {
-      status: 'error',
-      result: error,
-      requestId: requestId
-    }
-
-    this.worker.postMessage(resp)
-  }
-
-  dispatchResult(requestId: string, result: any) {
-    const resp: Response = {
-      status: 'success',
-      result: result,
-      requestId: requestId
-    }
-
-    this.worker.postMessage(resp)
-  }
-
-  // Static entrypoint allows us to maintain a reference to
-  // the constructed instance.
-  static start(worker: Worker):void {
-    const db = new ElectricDatabase()
-    const ref = new ElectricWorker(db, worker)
+  // Static entrypoint allows us to maintain a reference to the
+  // instance. Passing opts allows the user to configure.
+  static start(worker: Worker, opts: ElectrifyOptions = {}):void {
+    const ref = new ElectricWorker(worker, opts)
 
     refs.push(ref)
   }

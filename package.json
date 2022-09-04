@@ -52,7 +52,7 @@
   "scripts": {
     "dev": "tsmodule dev",
     "build": "tsmodule build",
-    "test": "ava",
+    "test": "ava --no-worker-threads",
     "pretest": "tsmodule build",
     "prepublishOnly": "yarn test",
     "lint": "eslint src --fix"
@@ -77,10 +77,12 @@
   },
   "devDependencies": {
     "@capacitor-community/sqlite": ">= 3.0.0",
+    "@jlongster/sql.js": "^1.6.7",
     "@tsmodule/tsmodule": "^40.0.17",
     "@types/node": "^18.7.13",
     "@typescript-eslint/eslint-plugin": "^5.34.0",
     "@typescript-eslint/parser": "^5.34.0",
+    "absurd-sql": "^0.0.53",
     "ava": "^4.3.1",
     "better-sqlite3": ">= 7.4.0",
     "cordova-sqlite-storage": ">= 5.0.0",

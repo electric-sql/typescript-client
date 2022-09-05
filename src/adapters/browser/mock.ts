@@ -61,7 +61,7 @@ export class MockDatabase implements Database {
   export(): Uint8Array {
     return new Uint8Array(2)
   }
-  create_function(_name: string, _func: AnyFunction | string): Database {
+  create_function(_name: string, _func?: AnyFunction | string): Database {
     return this
   }
 }

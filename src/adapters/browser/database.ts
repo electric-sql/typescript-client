@@ -32,7 +32,7 @@ export interface Database {
   getRowsModified(): number | Promise<number>
   close(): void | Promise<void>
   export(): Uint8Array | Promise<Uint8Array>
-  create_function(name: string, func: AnyFunction | string): Database | Promise<Database>
+  create_function(name: string, func?: AnyFunction | string): Database | Promise<Database>
 }
 
 export interface Statement {
@@ -117,7 +117,11 @@ export class ElectricDatabase {
   }
   // N.b.: we can't pass functions to the worker, so any functions
   // need to be defined and hung off `self` in worker.js.
-  async create_function(name: string, fnName: string): Promise<boolean> {
+  async create_function(name: string, fnName?: string): Promise<boolean> {
+    if (fnName === undefined) {
+      fnName = name
+    }
+
     const fn = this._user_defined_functions[fnName]
 
     if (fn !== undefined) {
@@ -171,7 +175,7 @@ export class MainThreadDatabaseProxy implements Database {
 
     return this
   }
-  async prepare(sql: string, params?: BindParams): Promise<MainThreadStatementProxy> {
+  async prepare(sql: string, params?: BindParams): Promise<Statement> {
     const id = await this._request('prepare', sql, params)
     const stmt = new MainThreadStatementProxy(id, sql, this, this._workerClient)
 
@@ -211,7 +215,10 @@ export class MainThreadDatabaseProxy implements Database {
     return this
   }
   async *iterateStatements(sqlStatements: string): StatementIterator {
-    const parts: string[] = sqlStatements.split(';')
+    const parts: string[] = sqlStatements
+      .split(';')
+      .filter(x => x && x.trim())
+
     const stmtIds: string[] = []
 
     let i: number
@@ -221,7 +228,7 @@ export class MainThreadDatabaseProxy implements Database {
     try {
       for (i = 0; i < parts.length; i++) {
         sql = parts[i]
-        stmt = await this.prepare(sql)
+        stmt = await this.prepare(sql) as MainThreadStatementProxy
         stmtIds.push(stmt._id)
         yield stmt
       }
@@ -244,8 +251,19 @@ export class MainThreadDatabaseProxy implements Database {
 
   // N.b.: we can't pass functions to the worker, so any functions
   // need to be defined and hung off `self` in worker.js.
-  async create_function(name: string, fnName: string): Promise<Database> {
-    await this._request('create_function', name, fnName)
+  async create_function(name: string, fnName?: string): Promise<Database> {
+    const result = await this._request('create_function', name, fnName)
+
+    if (!result) {
+      if (fnName === undefined) {
+        fnName = name
+      }
+
+      const msg = `Failed to create \`${fnName}\. ` +
+                  `Have you added it to \`self.user_defined_functions\` ` +
+                  `in your worker.js?`
+      throw new Error(msg)
+    }
 
     return this
   }

@@ -528,7 +528,7 @@ test('statement bind and reset allows reuse with notify', async t => {
   t.is(notifications.length, 3)
 })
 
-test.only('statement get notifies if called with params', async t => {
+test('statement get notifies if called with params', async t => {
   const worker = makeWorker()
   const client = new WorkerClient(worker)
   await client.request(initMethod, '<locator pattern>')
@@ -555,7 +555,7 @@ test.only('statement get notifies if called with params', async t => {
   t.is(notifications.length, 2)
 })
 
-test.only('statement getAsObject notifies if called with params', async t => {
+test('statement getAsObject notifies if called with params', async t => {
   const worker = makeWorker()
   const client = new WorkerClient(worker)
   await client.request(initMethod, '<locator pattern>')

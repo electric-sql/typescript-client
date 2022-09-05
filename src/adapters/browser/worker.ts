@@ -42,30 +42,36 @@ export class ElectricWorker extends BaseWorkerServer {
       throw new RequestError(400, 'Must init before opening')
     }
 
-    const SQL = this.SQL
-    const path = `/electric-sql/${dbName}`
-
-    if (typeof SharedArrayBuffer === 'undefined') {
-      const stream = SQL.FS.open(path, 'a+')
-      await stream.node.contents.readIfFallback()
-      SQL.FS.close(stream)
-    }
-
-    const db = new SQL.Database(path, {filename: true})
-    db.exec(`PRAGMA journal_mode=MEMORY; PRAGMA page_size=8192;`)
-
     const opts = this.opts
-    const defaultNamespace = opts.defaultNamespace || DEFAULTS.namespace
-    const commitNotifier = opts.commitNotifier || new EmitCommitNotifier(dbName)
-    const fs = opts.filesystem || new BrowserFilesystem()
-    const queryAdapter = opts.queryAdapter || new QueryAdapter(db, defaultNamespace)
-    const satelliteDbAdapter = opts.satelliteDbAdapter || new SatelliteDatabaseAdapter(db)
     const satelliteRegistry = opts.satelliteRegistry || globalRegistry
 
-    const namespace = new ElectricNamespace(commitNotifier, queryAdapter)
-    this.db = new ElectricDatabase(db, namespace, this.worker.user_defined_functions)
+    if (!(dbName in this._dbs)) {
+      const SQL = this.SQL
+      const path = `/electric-sql/${dbName}`
 
-    await satelliteRegistry.ensureStarted(dbName, satelliteDbAdapter, fs)
+      if (typeof SharedArrayBuffer === 'undefined') {
+        const stream = SQL.FS.open(path, 'a+')
+        await stream.node.contents.readIfFallback()
+        SQL.FS.close(stream)
+      }
+
+      const db = new SQL.Database(path, {filename: true})
+      db.exec(`PRAGMA journal_mode=MEMORY; PRAGMA page_size=8192;`)
+
+      const defaultNamespace = opts.defaultNamespace || DEFAULTS.namespace
+      const commitNotifier = opts.commitNotifier || new EmitCommitNotifier(dbName)
+      const fs = opts.filesystem || new BrowserFilesystem()
+      const queryAdapter = opts.queryAdapter || new QueryAdapter(db, defaultNamespace)
+      const satelliteDbAdapter = opts.satelliteDbAdapter || new SatelliteDatabaseAdapter(db)
+
+      const namespace = new ElectricNamespace(commitNotifier, queryAdapter)
+      this._dbs[dbName] = new ElectricDatabase(db, namespace, this.worker.user_defined_functions)
+
+      await satelliteRegistry.ensureStarted(dbName, satelliteDbAdapter, fs)
+    }
+    else {
+      await satelliteRegistry.ensureAlreadyStarted(dbName)
+    }
 
     return true
   }

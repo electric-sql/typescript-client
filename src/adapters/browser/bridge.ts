@@ -1,5 +1,5 @@
 import { randomValue } from '../../util/random'
-import { AnyFunction } from '../../util/types'
+import { AnyFunction, DbName, StatementId } from '../../util/types'
 import { ElectrifyOptions } from '../../electric/index'
 import { ElectricDatabase } from './database'
 
@@ -11,9 +11,29 @@ declare global {
   }
 }
 
+export interface ServerMethod {
+  target: 'server'
+  name: 'init' | 'open'
+}
+
+export interface DbMethod {
+  target: 'db'
+  dbName: DbName
+  name: string
+}
+
+export interface StatementMethod {
+  target: 'statement'
+  dbName: DbName
+  statementId: StatementId,
+  name: string
+}
+
+type RequestMethod = ServerMethod | DbMethod | StatementMethod
+
 export interface Request {
   args: any[]
-  method: string,
+  method: RequestMethod,
   requestId: string
 }
 
@@ -49,7 +69,7 @@ export class WorkerClient {
     this.postMessage = worker.postMessage.bind(worker)
   }
 
-  request(method: string, ...args: any[]): Promise<any> {
+  request(method: RequestMethod, ...args: any[]): Promise<any> {
     const requestId = randomValue()
     const data = {
       args: args,
@@ -82,26 +102,29 @@ export class WorkerClient {
 }
 
 // Run in the worker thread to handle requests from the main thread.
+// Routes messages according to the method interfaces above.
 //
-// Routes according to a naming convention in the method name:
-//
-// - 'init' | 'open' => this.init / this.open
-// - 'db:method' => this.db.method
-// - 'stmt:id:method' => this.db._getStatement(id).method
+// - ServerMethod => this.init / this.open
+// - DbMethod => this._dbs[dbName].method
+// - StatementMethod => this._dbs[dbName]._getStatement(id).method
 //
 // It's abstract because we extend with concrete implementations
 // for the open and init methods and an implementatin specific
 // start method.
 export abstract class BaseWorkerServer {
+  SQL?: any
+
   worker: Worker
   opts: ElectrifyOptions
 
-  SQL?: any
-  db?: ElectricDatabase
+  _dbs: {
+    [key: DbName]: ElectricDatabase
+  }
 
   constructor(worker: Worker, opts: ElectrifyOptions) {
     this.worker = worker
     this.opts = opts
+    this._dbs = {}
 
     this.worker.addEventListener('message', this.handleCall.bind(this))
   }
@@ -159,26 +182,28 @@ export abstract class BaseWorkerServer {
     return fn.bind(target)
   }
 
-  _getTargetFunction(method: string): AnyFunction | void {
-    const parts = method.split(':')
+  _getDb(dbName: DbName): ElectricDatabase | undefined {
+    return this._dbs[dbName]
+  }
 
-    if (parts.length === 1 && ['init', 'open'].includes(method)) {
-      return this._getBound(this, method)
+  _getTargetFunction(method: RequestMethod): AnyFunction | void {
+    if (method.target === 'server') {
+      return this._getBound(this, method.name)
     }
 
-    if (this.db === undefined) {
+    const db = this._getDb(method.dbName)
+    if (db === undefined) {
       throw new RequestError(500, 'Database not open')
     }
 
-    if (parts.length === 2 && method.startsWith('db:')) {
-      return this._getBound(this.db, parts[1])
+    if (method.target === 'db') {
+      return this._getBound(db, method.name)
     }
 
-    if (parts.length === 3 || method.startsWith('stmt:')) {
-      const [ _literal, statementId, methodName ] = parts
-      const statement = this.db._getStatement(statementId)
+    if (method.target === 'statement') {
+      const statement = db._getStatement(method.statementId)
 
-      return this._getBound(statement, methodName)
+      return this._getBound(statement, method.name)
     }
   }
 

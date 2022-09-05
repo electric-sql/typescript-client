@@ -10,7 +10,7 @@ import {
   RowCallback,
   SqlValue
 } from '../../util/types'
-import { WorkerClient } from './bridge'
+import { DbMethod, StatementMethod, WorkerClient } from './bridge'
 
 export interface Config {
   useBigInt?: boolean
@@ -146,10 +146,14 @@ export class MainThreadDatabaseProxy implements Database {
     this._statements = {}
   }
 
-  _request(method: string, ...args: any[]): Promise<any> {
-    const methodName = `db:${method}`
+  _request(methodName: string, ...args: any[]): Promise<any> {
+    const method: DbMethod = {
+      target: 'db',
+      dbName: this._dbName,
+      name: methodName
+    }
 
-    return this._workerClient.request(methodName, ...args)
+    return this._workerClient.request(method, ...args)
   }
 
   async _releaseStatement(id: string): Promise<void> {
@@ -262,10 +266,15 @@ export class MainThreadStatementProxy implements Statement {
     this._workerClient = workerClient
   }
 
-  _request(method: string, ...args: any[]): Promise<any> {
-    const methodName = `statement:${this._id}:${method}`
+  _request(methodName: string, ...args: any[]): Promise<any> {
+    const method: StatementMethod = {
+      target: 'statement',
+      dbName: this.db._dbName,
+      statementId: this._id,
+      name: methodName
+    }
 
-    return this._workerClient.request(methodName, ...args)
+    return this._workerClient.request(method, ...args)
   }
 
   bind(values: BindParams): Promise<boolean> {

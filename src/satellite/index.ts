@@ -42,6 +42,7 @@ export interface SatelliteDatabaseAdapter {
 // that the application is using.
 export interface SatelliteRegistry {
   ensureStarted(dbName: DbName, dbAdapter: SatelliteDatabaseAdapter, fs: Filesystem): Promise<Satellite>
+  ensureAlreadyStarted(dbName: DbName): Promise<Satellite>
   stop(dbName: DbName): Promise<void>
   stopAll(): Promise<void>
 }

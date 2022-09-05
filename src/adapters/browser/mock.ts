@@ -4,7 +4,6 @@ import { DEFAULTS } from '../../electric/config'
 import { ElectricNamespace } from '../../electric/index'
 
 import { MockFilesystem } from '../../filesystems/mock'
-import { CommitNotifier } from '../../notifiers/index'
 import { MockCommitNotifier } from '../../notifiers/mock'
 import { globalRegistry } from '../../satellite/registry'
 
@@ -14,10 +13,18 @@ import { QueryAdapter } from './query'
 import { SatelliteDatabaseAdapter } from './satellite'
 
 export class MockDatabase implements Database {
+  dbName: DbName
+
+  constructor(dbName: DbName) {
+    this.dbName = dbName
+  }
+
   exec(_sql: string, _params?: BindParams, _config?: Config): QueryExecResult {
+    const dbName = this.dbName
+
     return {
-      columns: ['a'],
-      values: [[1], [2]]
+      columns: ['db', 'val'],
+      values: [[dbName, 1], [dbName, 2]]
     }
   }
   run(_sql: string, _params?: BindParams): Database {
@@ -117,9 +124,6 @@ export class MockStatement implements Statement {
 }
 
 export class MockElectricWorker extends BaseWorkerServer {
-  original?: Database
-  notifier?: CommitNotifier
-
   async init(_locatorPattern: string): Promise<boolean> {
     this.SQL = true
 
@@ -131,22 +135,26 @@ export class MockElectricWorker extends BaseWorkerServer {
       throw new RequestError(400, 'Must init before opening')
     }
 
-    const db = new MockDatabase()
-
     const opts = this.opts
-    const defaultNamespace = opts.defaultNamespace || DEFAULTS.namespace
-    const commitNotifier = opts.commitNotifier || new MockCommitNotifier(dbName)
-    const fs = opts.filesystem || new MockFilesystem()
-    const queryAdapter = opts.queryAdapter || new QueryAdapter(db, defaultNamespace)
-    const satelliteDbAdapter = opts.satelliteDbAdapter || new SatelliteDatabaseAdapter(db)
     const satelliteRegistry = opts.satelliteRegistry || globalRegistry
 
-    const namespace = new ElectricNamespace(commitNotifier, queryAdapter)
-    this.db = new ElectricDatabase(db, namespace, this.worker.user_defined_functions)
-    this.notifier = commitNotifier
-    this.original = db
+    if (!(dbName in this._dbs)) {
+      const db = new MockDatabase(dbName)
+      const defaultNamespace = opts.defaultNamespace || DEFAULTS.namespace
 
-    await satelliteRegistry.ensureStarted(dbName, satelliteDbAdapter, fs)
+      const commitNotifier = opts.commitNotifier || new MockCommitNotifier(dbName)
+      const fs = opts.filesystem || new MockFilesystem()
+      const queryAdapter = opts.queryAdapter || new QueryAdapter(db, defaultNamespace)
+      const satelliteDbAdapter = opts.satelliteDbAdapter || new SatelliteDatabaseAdapter(db)
+
+      const namespace = new ElectricNamespace(commitNotifier, queryAdapter)
+      this._dbs[dbName] = new ElectricDatabase(db, namespace, this.worker.user_defined_functions)
+
+      await satelliteRegistry.ensureStarted(dbName, satelliteDbAdapter, fs)
+    }
+    else {
+      await satelliteRegistry.ensureAlreadyStarted(dbName)
+    }
 
     return true
   }

@@ -2,7 +2,7 @@ import { initBackend } from '@aphro/absurd-sql/dist/indexeddb-main-thread'
 
 import { DbName } from '../../util/types'
 
-import { WorkerClient } from './bridge'
+import { ServerMethod, WorkerClient } from './bridge'
 import { MainThreadDatabaseProxy } from './database'
 import { LocateFileOpts, WasmLocator } from './locator'
 
@@ -18,10 +18,18 @@ export const initElectricSqlJs = async (worker: Worker, locateOpts: LocateFileOp
 
   const locator = new WasmLocator(locateOpts)
   const workerClient = new WorkerClient(worker)
-  await workerClient.request('init', locator.serialise())
+
+  const init: ServerMethod = {
+    target: 'server', name: 'init'
+  }
+  await workerClient.request(init, locator.serialise())
 
   const openDatabase = async (dbName: DbName): Promise<MainThreadDatabaseProxy> => {
-    await workerClient.request('open', dbName)
+    const open: ServerMethod = {
+      target: 'server',
+      name: 'open'
+    }
+    await workerClient.request(open, dbName)
 
     return new MainThreadDatabaseProxy(dbName, workerClient)
   }

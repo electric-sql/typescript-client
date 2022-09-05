@@ -11,7 +11,7 @@ export class SatelliteDatabaseAdapter implements SatelliteDatabaseAdapterInterfa
   }
 
   async exec(sql: string): Promise<void> {
-    await this.db.exec(sql)
+    await this.db.run(sql)
   }
 
   async query(sql: string, bindParams: BindParams = []): Promise<Row[]> {

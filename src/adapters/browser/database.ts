@@ -1,4 +1,6 @@
 import { ElectricNamespace } from '../../electric/index'
+import { ProxyWrapper, proxyOriginal } from '../../proxy/index'
+import { isPotentiallyDangerous } from '../../util/parser'
 import { randomValue } from '../../util/random'
 import {
   AnyFunction,
@@ -22,7 +24,7 @@ export interface QueryExecResult {
 }
 
 // The SQL.js API that we need to proxy -- which in this case
-// is the entire interface.
+// is basically the entire interface.
 export interface Database {
   exec(sql: string, params?: BindParams, config?: Config): QueryExecResult | Promise<QueryExecResult>
   run(sql: string, params?: BindParams): Database | Promise<Database>
@@ -91,16 +93,34 @@ export class ElectricDatabase {
   }
 
   async exec(sql: string, params?: BindParams, config?: Config): Promise<QueryExecResult> {
-    return this.db.exec(sql, params, config)
+    const shouldNotify = isPotentiallyDangerous(sql)
+
+    const retval = await this.db.exec(sql, params, config)
+
+    if (shouldNotify) {
+      this.electric.notifyCommit()
+    }
+
+    return retval
   }
   async run(sql: string, params?: BindParams): Promise<void> {
+    const shouldNotify = isPotentiallyDangerous(sql)
+
     await this.db.run(sql, params)
+
+    if (shouldNotify) {
+      this.electric.notifyCommit()
+    }
   }
   async prepare(sql: string, params?: BindParams): Promise<string> {
     const key = randomValue()
     const stmt = await this.db.prepare(sql, params)
 
-    this._statements[key] = stmt
+    const namespace = this.electric
+    const shouldNotify = isPotentiallyDangerous(sql)
+    const electric = new ElectricStatement(stmt, namespace, shouldNotify)
+
+    this._statements[key] = proxyOriginal(stmt, electric)
 
     return key
   }
@@ -131,6 +151,56 @@ export class ElectricDatabase {
     }
 
     return false
+  }
+}
+
+// Wrap prepared statements to automatically notify on write
+// when executed outside of a transaction.
+//
+// The SQL.js interface is quite challenging, because it uses
+// the `step` function to keep iterating statements and it's
+// hard to know when the statement is finished, except for
+// when it's freed -- but a dangerous query could easily have
+// changed data before finishing.
+export class ElectricStatement implements ProxyWrapper {
+  _isPotentiallyDangerous: boolean
+  _stmt: Statement
+
+  electric: ElectricNamespace
+
+  constructor(stmt: Statement, electric: ElectricNamespace, isPotentiallyDangerous: boolean) {
+    this._isPotentiallyDangerous = isPotentiallyDangerous
+    this._stmt = stmt
+    this.electric = electric
+  }
+
+  _setOriginal(stmt: Statement): void {
+    this._stmt = stmt
+  }
+  _getOriginal(): Statement {
+    return this._stmt
+  }
+
+  async run(values: BindParams): Promise<boolean> {
+    const shouldNotify = this._isPotentiallyDangerous
+    const result = await this._stmt.run(values)
+
+    if (shouldNotify) {
+      this.electric.notifyCommit()
+    }
+
+    return result
+  }
+
+  async free(): Promise<boolean> {
+    const shouldNotify = this._isPotentiallyDangerous
+    const result = await this._stmt.free()
+
+    if (shouldNotify) {
+      this.electric.notifyCommit()
+    }
+
+    return result
   }
 }
 

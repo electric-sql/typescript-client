@@ -34,6 +34,7 @@ export class QueryAdapter implements QueryAdapterInterface {
     this.defaultNamespace = defaultNamespace
   }
 
+  // XXX accept prepared statements?
   async perform(query: string, bindParams: BindParams): Promise<Row[]> {
     const result = await this.db.exec(query, bindParams)
 

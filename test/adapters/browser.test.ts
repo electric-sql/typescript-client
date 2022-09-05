@@ -246,6 +246,109 @@ test('db.create_function works', async t => {
   })
 })
 
+test('statement bind works', async t => {
+  const db = await makeDb()
+  const stmt = await db.prepare('select 1')
+
+  t.is(await stmt.bind([1, 2, 3]), true)
+})
+
+test('statement step works', async t => {
+  const db = await makeDb()
+  const stmt = await db.prepare('select value from items limit 3')
+
+  t.is(await stmt.step(), true)
+  t.is(await stmt.step(), true)
+  t.is(await stmt.step(), true)
+  t.is(await stmt.step(), false)
+})
+
+test('statement get works', async t => {
+  const db = await makeDb()
+  const stmt = await db.prepare('select value from items limit 3')
+
+  t.deepEqual(await stmt.get(), [1])
+})
+
+test('statement getColumnNames works', async t => {
+  const db = await makeDb()
+  const stmt = await db.prepare('select value from items limit 3')
+
+  t.deepEqual(await stmt.getColumnNames(), ['a'])
+})
+
+test('statement getAsObject works', async t => {
+  const db = await makeDb()
+  const stmt = await db.prepare('select foo')
+
+  t.deepEqual(await stmt.getAsObject(), {a: 1})
+})
+
+test('statement getAsObject with params works', async t => {
+  const db = await makeDb()
+  const stmt = await db.prepare('select foo')
+
+  t.deepEqual(await stmt.getAsObject([1, 2, 3]), {a: 1})
+})
+
+test('statement getSQL works', async t => {
+  const db = await makeDb()
+  const stmt = await db.prepare('select foo')
+
+  t.is(await stmt.getSQL(), 'select foo')
+})
+
+test('statement getNormalizedSQL works', async t => {
+  const db = await makeDb()
+  const stmt = await db.prepare('select foo')
+
+  t.is(await stmt.getSQL(), 'select foo')
+})
+
+test('statement run works', async t => {
+  const db = await makeDb()
+  const stmt = await db.prepare('select foo')
+
+  t.true(await stmt.run())
+})
+
+test('statement bindFromObject works', async t => {
+  const db = await makeDb()
+  const stmt = await db.prepare('select foo')
+
+  t.true(await stmt.bindFromObject({foo: 'bar'}))
+})
+
+test('statement bindFromArray works', async t => {
+  const db = await makeDb()
+  const stmt = await db.prepare('select foo')
+
+  t.true(await stmt.bindFromArray([1, 2, 3]))
+})
+
+test('statement reset works', async t => {
+  const db = await makeDb()
+  const stmt = await db.prepare('select value from items limit 3')
+
+  t.is(await stmt.step(), true)
+  t.is(await stmt.step(), true)
+  t.is(await stmt.step(), true)
+  t.is(await stmt.step(), false)
+
+  t.true(await stmt.reset())
+
+  t.is(await stmt.step(), true)
+  t.is(await stmt.step(), true)
+  t.is(await stmt.step(), true)
+  t.is(await stmt.step(), false)
+})
+
+test('statement free works', async t => {
+  const db = await makeDb()
+  const stmt = await db.prepare('select value from items limit 3')
+
+  t.true(await stmt.free())
+})
+
 // XXX to test:
-// - the statement api
 // - commit notifications

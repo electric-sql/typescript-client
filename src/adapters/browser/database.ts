@@ -94,7 +94,7 @@ export class ElectricDatabase {
     return this.db.exec(sql, params, config)
   }
   async run(sql: string, params?: BindParams): Promise<void> {
-    this.db.run(sql, params)
+    await this.db.run(sql, params)
   }
   async prepare(sql: string, params?: BindParams): Promise<string> {
     const key = randomValue()
@@ -108,7 +108,7 @@ export class ElectricDatabase {
     return this.db.getRowsModified()
   }
   async close(): Promise<void> {
-    this.db.close()
+    await this.db.close()
 
     this._statements = {}
   }
@@ -121,7 +121,7 @@ export class ElectricDatabase {
     const fn = this._user_defined_functions[fnName]
 
     if (fn !== undefined) {
-      this.db.create_function(name, fn)
+      await this.db.create_function(name, fn)
 
       return true
     }

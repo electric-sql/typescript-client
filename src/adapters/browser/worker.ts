@@ -1,6 +1,6 @@
-import initSqlJs from '@jlongster/sql.js'
-import { SQLiteFS } from 'absurd-sql'
-import IndexedDBBackend from 'absurd-sql/dist/indexeddb-backend'
+import initSqlJs from '@aphro/sql.js'
+import { SQLiteFS } from '@aphro/absurd-sql'
+import IndexedDBBackend from '@aphro/absurd-sql/dist/indexeddb-backend'
 
 import { DEFAULTS } from '../../electric/config'
 import { ElectricNamespace, ElectrifyOptions } from '../../electric/index'

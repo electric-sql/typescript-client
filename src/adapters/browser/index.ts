@@ -1,4 +1,4 @@
-import { initBackend } from 'absurd-sql/dist/indexeddb-main-thread'
+import { initBackend } from '@aphro/absurd-sql/dist/indexeddb-main-thread'
 
 import { DbName } from '../../util/types'
 

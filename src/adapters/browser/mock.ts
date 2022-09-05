@@ -4,6 +4,7 @@ import { DEFAULTS } from '../../electric/config'
 import { ElectricNamespace } from '../../electric/index'
 
 import { MockFilesystem } from '../../filesystems/mock'
+import { CommitNotification } from '../../notifiers/index'
 import { MockCommitNotifier } from '../../notifiers/mock'
 import { globalRegistry } from '../../satellite/registry'
 
@@ -11,6 +12,10 @@ import { BaseWorkerServer, RequestError } from './bridge'
 import { Config, Database, ElectricDatabase, QueryExecResult, Statement } from './database'
 import { QueryAdapter } from './query'
 import { SatelliteDatabaseAdapter } from './satellite'
+
+interface TestData {
+  commitNotifications: CommitNotification[]
+}
 
 export class MockDatabase implements Database {
   dbName: DbName
@@ -33,27 +38,6 @@ export class MockDatabase implements Database {
   prepare(sql: string, _params?: BindParams): Statement {
     return new MockStatement(this, sql)
   }
-  // each(_sql: string, params: BindParams | RowCallback, callback: RowCallback | EmptyFunction, done?: EmptyFunction, _config?: Config): Database {
-  //   const shiftArgs = typeof params === 'function'
-  //   const actualCallback = (shiftArgs ? params : callback) as RowCallback
-  //   const actualDone = (shiftArgs ? callback : done) as EmptyFunction
-
-  //   actualCallback({a: 1})
-  //   actualCallback({a: 2})
-
-  //   if (typeof actualDone === 'function') {
-  //     actualDone()
-  //   }
-
-  //   return this
-  // }
-  // async *iterateStatements(sqlStatements: string): StatementIterator {
-  //   const parts = sqlStatements.split(';')
-
-  //   for (let i = 0; i < parts.length; i++) {
-  //     yield this.prepare(parts[i])
-  //   }
-  // }
   getRowsModified(): number {
     return 0
   }
@@ -157,5 +141,15 @@ export class MockElectricWorker extends BaseWorkerServer {
     }
 
     return true
+  }
+
+  async _get_test_data(dbName: DbName): Promise<TestData> {
+    const db = this._dbs[dbName]
+    const notifier = db.electric.commitNotifier
+    const notifications = notifier.notifications
+
+    return {
+      commitNotifications: notifications ? notifications : []
+    }
   }
 }

@@ -154,21 +154,24 @@ export class ElectricDatabase {
   }
 }
 
-// Wrap prepared statements to automatically notify on write
-// when executed outside of a transaction.
+// Wrap prepared statements to automatically notify on write.
 //
-// The SQL.js interface is quite challenging, because it uses
-// the `step` function to keep iterating statements and it's
-// hard to know when the statement is finished, except for
-// when it's freed -- but a dangerous query could easily have
-// changed data before finishing.
+// Ideally we would track when statements are being executed
+// within a transaction. However, that's not naturally supported
+// by the SQL.js interface and it's not yet implemented in these
+// wrappers. Before implementing, we should really look at the
+// multiple connection handler stuff in the browser and at
+// implementing a transaction API that's safe for use from
+// multiple components at the same time.
 export class ElectricStatement implements ProxyWrapper {
+  _hasNotified: boolean
   _isPotentiallyDangerous: boolean
   _stmt: Statement
 
   electric: ElectricNamespace
 
   constructor(stmt: Statement, electric: ElectricNamespace, isPotentiallyDangerous: boolean) {
+    this._hasNotified = false
     this._isPotentiallyDangerous = isPotentiallyDangerous
     this._stmt = stmt
     this.electric = electric
@@ -181,23 +184,67 @@ export class ElectricStatement implements ProxyWrapper {
     return this._stmt
   }
 
-  async run(values: BindParams): Promise<boolean> {
-    const shouldNotify = this._isPotentiallyDangerous
-    const result = await this._stmt.run(values)
-
-    if (shouldNotify) {
-      this.electric.notifyCommit()
+  _conditionallyNotifyCommit () {
+    if (!this._isPotentiallyDangerous || this._hasNotified) {
+      return
     }
+
+    this.electric.notifyCommit()
+    this._hasNotified = true
+  }
+
+  // Bind and reset also reset the notification gate.
+  async bind(values: BindParams): Promise<boolean> {
+    const result = await this._stmt.bind(values)
+
+    this._hasNotified = false
+
+    return result
+  }
+  async reset(): Promise<boolean> {
+    const result = await this._stmt.reset()
+
+    this._hasNotified = false
 
     return result
   }
 
-  async free(): Promise<boolean> {
-    const shouldNotify = this._isPotentiallyDangerous
-    const result = await this._stmt.free()
+  // Run and step always conditionally notify.
+  async run(values: BindParams): Promise<boolean> {
+    const result = await this._stmt.run(values)
 
-    if (shouldNotify) {
-      this.electric.notifyCommit()
+    this._conditionallyNotifyCommit()
+
+    return result
+  }
+  async step(): Promise<boolean> {
+    const result = await this._stmt.step()
+
+    this._conditionallyNotifyCommit()
+
+    return result
+  }
+
+  // Get and getAsObject conditionally notify iff
+  // params are provided.
+  async get(params?: BindParams, config?: Config): Promise<SqlValue[]> {
+    const result = await this._stmt.get(params, config)
+
+    if (params !== undefined) {
+      this._hasNotified = false
+
+      this._conditionallyNotifyCommit()
+    }
+
+    return result
+  }
+  async getAsObject(params?: BindParams, config?: Config): Promise<Row> {
+    const result = await this._stmt.getAsObject(params, config)
+
+    if (params !== undefined) {
+      this._hasNotified = false
+
+      this._conditionallyNotifyCommit()
     }
 
     return result

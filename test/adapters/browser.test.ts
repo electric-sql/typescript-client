@@ -14,6 +14,8 @@ import { QualifiedTablename } from '../../src/util/tablename'
 const initMethod: ServerMethod = {target: 'server', name: 'init'}
 const openMethod: ServerMethod = {target: 'server', name: 'open'}
 
+const getTestData: ServerMethod = {target: 'server', name: '_get_test_data'}
+
 const makeWorker = () => {
   return new Worker('./test/support/mock-worker.js', {type: 'module'})
 }
@@ -31,8 +33,8 @@ test('init and open works', async t => {
   const worker = makeWorker()
   const client = new WorkerClient(worker)
 
-  t.is(await client.request(initMethod, '<locator pattern>'), true)
-  t.is(await client.request(openMethod, 'test.db'), true)
+  t.true(await client.request(initMethod, '<locator pattern>'))
+  t.true(await client.request(openMethod, 'test.db'))
 })
 
 test('the main thread proxy provides the expected methods', async t => {
@@ -250,17 +252,17 @@ test('statement bind works', async t => {
   const db = await makeDb()
   const stmt = await db.prepare('select 1')
 
-  t.is(await stmt.bind([1, 2, 3]), true)
+  t.true(await stmt.bind([1, 2, 3]))
 })
 
 test('statement step works', async t => {
   const db = await makeDb()
   const stmt = await db.prepare('select value from items limit 3')
 
-  t.is(await stmt.step(), true)
-  t.is(await stmt.step(), true)
-  t.is(await stmt.step(), true)
-  t.is(await stmt.step(), false)
+  t.true(await stmt.step())
+  t.true(await stmt.step())
+  t.true(await stmt.step())
+  t.false(await stmt.step())
 })
 
 test('statement get works', async t => {
@@ -330,17 +332,18 @@ test('statement reset works', async t => {
   const db = await makeDb()
   const stmt = await db.prepare('select value from items limit 3')
 
-  t.is(await stmt.step(), true)
-  t.is(await stmt.step(), true)
-  t.is(await stmt.step(), true)
-  t.is(await stmt.step(), false)
+  t.true(await stmt.step())
+  t.true(await stmt.step())
+  t.true(await stmt.step())
+  t.false(await stmt.step())
 
   t.true(await stmt.reset())
+  await stmt.bindFromObject({a: 1})
 
-  t.is(await stmt.step(), true)
-  t.is(await stmt.step(), true)
-  t.is(await stmt.step(), true)
-  t.is(await stmt.step(), false)
+  t.true(await stmt.step())
+  t.true(await stmt.step())
+  t.true(await stmt.step())
+  t.false(await stmt.step())
 })
 
 test('statement free works', async t => {
@@ -350,5 +353,231 @@ test('statement free works', async t => {
   t.true(await stmt.free())
 })
 
-// XXX to test:
-// - commit notifications
+test('db.exec harmless sql does not notify', async t => {
+  const worker = makeWorker()
+  const client = new WorkerClient(worker)
+  await client.request(initMethod, '<locator pattern>')
+  await client.request(openMethod, 'test.db')
+
+  const db = new MainThreadDatabaseProxy('test.db', client)
+  await db.exec('select 1')
+
+  const testData = await client.request(getTestData, 'test.db')
+  const notifications = testData.commitNotifications
+
+  t.is(notifications.length, 0)
+})
+
+test('db.exec dangerous sql does notify', async t => {
+  const worker = makeWorker()
+  const client = new WorkerClient(worker)
+  await client.request(initMethod, '<locator pattern>')
+  await client.request(openMethod, 'test.db')
+
+  const db = new MainThreadDatabaseProxy('test.db', client)
+  await db.exec('insert foo into bar')
+
+  const testData = await client.request(getTestData, 'test.db')
+  const notifications = testData.commitNotifications
+
+  t.is(notifications.length, 1)
+})
+
+test('db.run harmless sql does not notify', async t => {
+  const worker = makeWorker()
+  const client = new WorkerClient(worker)
+  await client.request(initMethod, '<locator pattern>')
+  await client.request(openMethod, 'test.db')
+
+  const db = new MainThreadDatabaseProxy('test.db', client)
+  await db.run('select 1')
+
+  const testData = await client.request(getTestData, 'test.db')
+  const notifications = testData.commitNotifications
+
+  t.is(notifications.length, 0)
+})
+
+test('db.run dangerous sql notifies', async t => {
+  const worker = makeWorker()
+  const client = new WorkerClient(worker)
+  await client.request(initMethod, '<locator pattern>')
+  await client.request(openMethod, 'test.db')
+
+  const db = new MainThreadDatabaseProxy('test.db', client)
+  await db.run('insert foo into bar')
+
+  const testData = await client.request(getTestData, 'test.db')
+  const notifications = testData.commitNotifications
+
+  t.is(notifications.length, 1)
+})
+
+test('db.each notifies', async t => {
+  const worker = makeWorker()
+  const client = new WorkerClient(worker)
+  await client.request(initMethod, '<locator pattern>')
+  await client.request(openMethod, 'test.db')
+
+  const db = new MainThreadDatabaseProxy('test.db', client)
+
+  const handleRow = (row: Row) => {}
+  const handleDone = () => {}
+
+  const retval = await db.each('insert into lala', handleRow, handleDone)
+
+  const testData = await client.request(getTestData, 'test.db')
+  const notifications = testData.commitNotifications
+
+  t.is(notifications.length, 1)
+})
+
+test('db.iterateStatements doesn\'t notify on its own', async t => {
+  const worker = makeWorker()
+  const client = new WorkerClient(worker)
+  await client.request(initMethod, '<locator pattern>')
+  await client.request(openMethod, 'test.db')
+  const db = new MainThreadDatabaseProxy('test.db', client)
+
+  const statements = 'select 1; insert into 2; select 3; insert into 4'
+  for await (const stmt of db.iterateStatements(statements)) {
+    // we don't do anything here
+  }
+
+  let testData = await client.request(getTestData, 'test.db')
+  let notifications = testData.commitNotifications
+
+  t.is(notifications.length, 0)
+
+  for await (const stmt of db.iterateStatements(statements)) {
+    stmt.step()
+  }
+
+  testData = await client.request(getTestData, 'test.db')
+  notifications = testData.commitNotifications
+
+  t.is(notifications.length, 2)
+})
+
+test('statement run notifies when dangerous', async t => {
+  const worker = makeWorker()
+  const client = new WorkerClient(worker)
+  await client.request(initMethod, '<locator pattern>')
+  await client.request(openMethod, 'test.db')
+  const db = new MainThreadDatabaseProxy('test.db', client)
+
+  const stmt = await db.prepare('insert foo into bar')
+  await stmt.run()
+
+  const testData = await client.request(getTestData, 'test.db')
+  const notifications = testData.commitNotifications
+
+  t.is(notifications.length, 1)
+})
+
+test('statement step notifies when dangerous', async t => {
+  const worker = makeWorker()
+  const client = new WorkerClient(worker)
+  await client.request(initMethod, '<locator pattern>')
+  await client.request(openMethod, 'test.db')
+  const db = new MainThreadDatabaseProxy('test.db', client)
+
+  const stmt = await db.prepare('insert foo into bar')
+  await stmt.step()
+
+  const testData = await client.request(getTestData, 'test.db')
+  const notifications = testData.commitNotifications
+
+  t.is(notifications.length, 1)
+})
+
+test('statement step only notifies once', async t => {
+  const worker = makeWorker()
+  const client = new WorkerClient(worker)
+  await client.request(initMethod, '<locator pattern>')
+  await client.request(openMethod, 'test.db')
+  const db = new MainThreadDatabaseProxy('test.db', client)
+
+  const stmt = await db.prepare('insert foo into bar')
+  await stmt.step()
+  await stmt.step()
+
+  const testData = await client.request(getTestData, 'test.db')
+  const notifications = testData.commitNotifications
+
+  t.is(notifications.length, 1)
+})
+
+test('statement bind and reset allows reuse with notify', async t => {
+  const worker = makeWorker()
+  const client = new WorkerClient(worker)
+  await client.request(initMethod, '<locator pattern>')
+  await client.request(openMethod, 'test.db')
+  const db = new MainThreadDatabaseProxy('test.db', client)
+
+  const stmt = await db.prepare('insert foo into bar')
+  await stmt.step()
+  await stmt.reset()
+  await stmt.step()
+  await stmt.bind({foo: 'baz'})
+  await stmt.step()
+
+  const testData = await client.request(getTestData, 'test.db')
+  const notifications = testData.commitNotifications
+
+  t.is(notifications.length, 3)
+})
+
+test.only('statement get notifies if called with params', async t => {
+  const worker = makeWorker()
+  const client = new WorkerClient(worker)
+  await client.request(initMethod, '<locator pattern>')
+  await client.request(openMethod, 'test.db')
+  const db = new MainThreadDatabaseProxy('test.db', client)
+
+  const stmt = await db.prepare('insert foo into bar')
+  await stmt.step()
+
+  let testData = await client.request(getTestData, 'test.db')
+  let notifications = testData.commitNotifications
+  t.is(notifications.length, 1)
+
+  await stmt.get()
+
+  testData = await client.request(getTestData, 'test.db')
+  notifications = testData.commitNotifications
+  t.is(notifications.length, 1)
+
+  await stmt.get({foo: 'baz'})
+
+  testData = await client.request(getTestData, 'test.db')
+  notifications = testData.commitNotifications
+  t.is(notifications.length, 2)
+})
+
+test.only('statement getAsObject notifies if called with params', async t => {
+  const worker = makeWorker()
+  const client = new WorkerClient(worker)
+  await client.request(initMethod, '<locator pattern>')
+  await client.request(openMethod, 'test.db')
+  const db = new MainThreadDatabaseProxy('test.db', client)
+
+  const stmt = await db.prepare('insert foo into bar')
+  await stmt.step()
+
+  let testData = await client.request(getTestData, 'test.db')
+  let notifications = testData.commitNotifications
+  t.is(notifications.length, 1)
+
+  await stmt.getAsObject()
+
+  testData = await client.request(getTestData, 'test.db')
+  notifications = testData.commitNotifications
+  t.is(notifications.length, 1)
+
+  await stmt.getAsObject({foo: 'baz'})
+
+  testData = await client.request(getTestData, 'test.db')
+  notifications = testData.commitNotifications
+  t.is(notifications.length, 2)
+})

@@ -13,7 +13,7 @@ declare global {
 
 export interface ServerMethod {
   target: 'server'
-  name: 'init' | 'open'
+  name: 'init' | 'open' | '_get_test_data'
 }
 
 export interface DbMethod {

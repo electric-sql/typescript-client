@@ -41,11 +41,11 @@
   ],
   "exports": {
     "./package.json": "./package.json",
-    "./browser": "./dist/adapters/browser/index.js",
-    "./cordova": "./dist/adapters/cordova-sqlite-storage/index.js",
-    "./expo": "./dist/adapters/expo-sqlite/index.js",
-    "./node": "./dist/adapters/better-sqlite3/index.js",
-    "./react-native": "./dist/adapters/react-native-sqlite-storage/index.js",
+    "./browser": "./dist/drivers/browser/index.js",
+    "./cordova": "./dist/drivers/cordova-sqlite-storage/index.js",
+    "./expo": "./dist/drivers/expo-sqlite/index.js",
+    "./node": "./dist/drivers/better-sqlite3/index.js",
+    "./react-native": "./dist/drivers/react-native-sqlite-storage/index.js",
     ".": "./dist/index.js",
     "./*": "./dist/*/index.js"
   },

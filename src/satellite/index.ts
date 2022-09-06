@@ -1,4 +1,4 @@
-import { AnyDatabase } from '../adapters/index'
+import { AnyDatabase } from '../drivers/index'
 import { Filesystem } from '../filesystems/index'
 import { ChangeNotifier } from '../notifiers/index'
 import { BindParams, DbName, Row } from '../util/types'

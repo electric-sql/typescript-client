@@ -1,5 +1,5 @@
 import { MockCommitNotifier } from '../../src/notifiers/mock'
-import { MockElectricWorker } from '../../src/adapters/browser/mock'
+import { MockElectricWorker } from '../../src/drivers/browser/mock'
 
 // XXX These functions become available to add to an
 // open database using `db.create_function`.

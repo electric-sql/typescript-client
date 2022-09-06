@@ -41,7 +41,7 @@
   ],
   "exports": {
     "./package.json": "./package.json",
-    "./browser": "./dist/drivers/browser/index.js",
+    "./browser": "./dist/drivers/absurd-sql/index.js",
     "./cordova": "./dist/drivers/cordova-sqlite-storage/index.js",
     "./expo": "./dist/drivers/expo-sqlite/index.js",
     "./node": "./dist/drivers/better-sqlite3/index.js",

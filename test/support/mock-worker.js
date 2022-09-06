@@ -1,5 +1,5 @@
+import { MockElectricWorker } from '../../src/drivers/absurd-sql/mock'
 import { MockNotifier } from '../../src/notifiers/mock'
-import { MockElectricWorker } from '../../src/drivers/browser/mock'
 
 // XXX These functions become available to add to an
 // open database using `db.create_function`.

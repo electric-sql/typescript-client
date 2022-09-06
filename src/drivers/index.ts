@@ -1,13 +1,13 @@
 import {
+  Database as AbsurdSQLDatabase,
+  ElectricDatabase as AbsurdSQLElectricDatabase,
+  ElectricMainThreadDatabaseProxy as AbsurdSQLElectricMainThreadDatabaseProxy
+} from './absurd-sql/database'
+
+import {
   Database as BetterSQLite3Database,
   ElectricDatabase as BetterSQLite3ElectricDatabase
 } from './better-sqlite3/database'
-
-import {
-  Database as BrowserDatabase,
-  ElectricDatabase as BrowserElectricDatabase,
-  ElectricMainThreadDatabaseProxy as BrowserElectricMainThreadDatabaseProxy
-} from './browser/database'
 
 import {
   Database as CordovaSQLiteStorageDatabase,
@@ -25,19 +25,19 @@ import {
 } from './generic/database'
 
 export type AnyDatabase =
-  BetterSQLite3Database
-  | BrowserDatabase
+  AbsurdSQLDatabase
+  | BetterSQLite3Database
   | CordovaSQLiteStorageDatabase
   | ReactNativeSQLiteStorageDatabase
   | GenericDatabase
 
 export type AnyElectricDatabase =
-  BetterSQLite3ElectricDatabase
-  | BrowserElectricDatabase
-  | BrowserElectricMainThreadDatabaseProxy
+  AbsurdSQLElectricDatabase
+  | AbsurdSQLElectricMainThreadDatabaseProxy
+  | BetterSQLite3ElectricDatabase
   | CordovaSQLiteStorageElectricDatabase
   | ReactNativeSQLiteStorageElectricDatabase
   | GenericElectricDatabase
 
 export type AnyWorkerThreadElectricDatabase =
-  BrowserElectricDatabase
+  AbsurdSQLElectricDatabase

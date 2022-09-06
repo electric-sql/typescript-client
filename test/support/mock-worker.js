@@ -1,4 +1,4 @@
-import { MockCommitNotifier } from '../../src/notifiers/mock'
+import { MockNotifier } from '../../src/notifiers/mock'
 import { MockElectricWorker } from '../../src/drivers/browser/mock'
 
 // XXX These functions become available to add to an
@@ -9,5 +9,5 @@ self.user_defined_functions = {
   }
 }
 
-const notifier = new MockCommitNotifier('test.db')
-const ref = new MockElectricWorker(self, {commitNotifier: notifier})
+const notifier = new MockNotifier('test.db')
+const ref = new MockElectricWorker(self, {notifier: notifier})

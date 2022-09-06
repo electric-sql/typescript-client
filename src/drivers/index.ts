@@ -5,6 +5,8 @@ import {
 
 import {
   Database as BrowserDatabase,
+  ElectricDatabase as BrowserElectricDatabase,
+  ElectricMainThreadDatabaseProxy as BrowserElectricMainThreadDatabaseProxy
 } from './browser/database'
 
 import {
@@ -31,6 +33,11 @@ export type AnyDatabase =
 
 export type AnyElectricDatabase =
   BetterSQLite3ElectricDatabase
+  | BrowserElectricDatabase
+  | BrowserElectricMainThreadDatabaseProxy
   | CordovaSQLiteStorageElectricDatabase
   | ReactNativeSQLiteStorageElectricDatabase
   | GenericElectricDatabase
+
+export type AnyWorkerThreadElectricDatabase =
+  BrowserElectricDatabase

@@ -51,9 +51,9 @@
   },
   "scripts": {
     "dev": "tsmodule dev",
-    "build": "tsmodule build",
+    "build": "rm -rf ./dist && tsmodule build",
     "test": "ava --no-worker-threads",
-    "pretest": "tsmodule build",
+    "pretest": "yarn build",
     "prepublishOnly": "yarn test",
     "lint": "eslint src --fix"
   },

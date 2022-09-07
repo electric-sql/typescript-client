@@ -133,8 +133,10 @@ export class WorkerClient {
     this.postMessage(data)
   }
 
-  subscribeToChanges(callback: ChangeCallback): string {
-    const key = randomValue()
+  subscribeToChanges(key: string, callback: ChangeCallback): string {
+    if (key in this._changeCallbacks) {
+      throw new Error(`Subscription key clash -- \`key\` must be unique.`)
+    }
 
     this._changeCallbacks[key] = callback
 

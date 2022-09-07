@@ -1,13 +1,5 @@
-import { EventEmitter } from 'events'
-
-import { randomValue } from '../util/random'
 import { QualifiedTablename } from '../util/tablename'
-import { AnyFunction, DbName, RowId } from '../util/types'
-
-const EVENTS = {
-  actualChange: 'actually:changed',
-  potentialChange: 'potentially:changed'
-}
+import { DbName, RowId } from '../util/types'
 
 export interface Change {
   qualifiedTablename: QualifiedTablename,
@@ -20,10 +12,10 @@ export interface ChangeNotification {
 export interface PotentialChangeNotification {
   dbName: DbName
 }
+export type Notification = ChangeNotification | PotentialChangeNotification
 
 export type ChangeCallback = (notification: ChangeNotification) => void
 export type PotentialChangeCallback = (notification: PotentialChangeNotification) => void
-export type Notification = ChangeNotification | PotentialChangeNotification
 export type NotificationCallback = ChangeCallback | PotentialChangeCallback
 
 export interface Notifier {
@@ -44,7 +36,7 @@ export interface Notifier {
 
   // Satellite processes subscribe to *potential* data changes and check
   // the opslog for *actual* changes as part of the replication machinery.
-  subscribeToPotentialDataChanges(dbName: DbName, callback: PotentialChangeCallback): string
+  subscribeToPotentialDataChanges(callback: PotentialChangeCallback): string
   unsubscribeFromPotentialDataChanges(key: string): void
 
   // When Satellite detects actual data changes in the opslog for a given
@@ -56,103 +48,4 @@ export interface Notifier {
   // when (and only when) necessary.
   subscribeToDataChanges(callback: ChangeCallback): string
   unsubscribeFromDataChanges(key: string): void
-}
-
-export class EventNotifier implements Notifier {
-  dbNames: Set<DbName>
-  events: EventEmitter
-
-  _changeCallbacks: {
-    [key: string]: NotificationCallback
-  }
-
-  constructor(dbNames: DbName | DbName[]) {
-    this.dbNames = new Set(Array.isArray(dbNames) ? dbNames : [dbNames])
-
-    this.events = new EventEmitter()
-
-    this._changeCallbacks = {}
-  }
-
-  attach(dbName: DbName): void {
-    this.dbNames.add(dbName)
-  }
-
-  detach(dbName: DbName): void {
-    this.dbNames.delete(dbName)
-  }
-
-  potentiallyChanged(dbName?: DbName): void {
-    const dbNames = [...this.dbNames].filter((candidate) => {
-      return dbName !== undefined ? candidate === dbName : true
-    })
-
-    dbNames.forEach((dbName) => {
-      this._emit(EVENTS.potentialChange, {dbName: dbName})
-    })
-  }
-  actuallyChanged(dbName: DbName, changes: Change[]): void {
-    const notification: ChangeNotification = {
-      dbName: dbName,
-      changes: changes
-    }
-
-    this._emit(EVENTS.actualChange, notification)
-  }
-
-  subscribeToPotentialDataChanges(dbName: DbName, callback: PotentialChangeCallback): string {
-    const key = randomValue()
-
-    const wrappedCallback = (notification: PotentialChangeNotification) => {
-      if (notification.dbName === dbName) {
-        callback(notification)
-      }
-    }
-
-    this._changeCallbacks[key] = wrappedCallback
-    this._subscribe(EVENTS.potentialChange, wrappedCallback)
-
-    return key
-  }
-  unsubscribeFromPotentialDataChanges(key: string): void {
-    const callback = this._changeCallbacks[key]
-
-    if (callback === undefined) {
-      return
-    }
-
-    this._unsubscribe(EVENTS.potentialChange, callback)
-
-    delete this._changeCallbacks[key]
-  }
-
-  subscribeToDataChanges(callback: ChangeCallback): string {
-    const key = randomValue()
-
-    this._changeCallbacks[key] = callback
-    this._subscribe(EVENTS.actualChange, callback)
-
-    return key
-  }
-  unsubscribeFromDataChanges(key: string): void {
-    const callback = this._changeCallbacks[key]
-
-    if (callback === undefined) {
-      return
-    }
-
-    this._unsubscribe(EVENTS.actualChange, callback)
-
-    delete this._changeCallbacks[key]
-  }
-
-  _emit(eventName: string, notification: Notification) {
-    this.events.emit(eventName, notification)
-  }
-  _subscribe(eventName: string, callback: AnyFunction): void {
-    this.events.addListener(eventName, callback)
-  }
-  _unsubscribe(eventName: string, callback: AnyFunction): void {
-    this.events.removeListener(eventName, callback)
-  }
 }

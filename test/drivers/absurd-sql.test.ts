@@ -1,7 +1,6 @@
 import test from 'ava'
 
 import Worker from 'web-worker'
-import { Blob } from 'node:buffer'
 
 import { RequestError, ServerMethod, WorkerClient } from '../../src/bridge/index'
 import { MainThreadDatabaseProxy, MainThreadStatementProxy } from '../../src/drivers/absurd-sql/database'

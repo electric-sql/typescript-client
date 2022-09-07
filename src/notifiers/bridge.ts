@@ -10,7 +10,8 @@
 import { NotifyMethod, WorkerClient, WorkerServer } from '../bridge/index'
 import { DbName } from '../util/types'
 
-import { Change, ChangeCallback, EventNotifier, Notifier } from './index'
+import { Change, ChangeCallback, Notifier, PotentialChangeNotification } from './index'
+import { EventNotifier } from './event'
 
 // Extend the default EventNotifier to:
 // - send potentiallyChanged notifications to the worker thread
@@ -24,28 +25,29 @@ export class MainThreadBridgeNotifier extends EventNotifier implements Notifier 
     this.workerClient = workerClient
   }
 
-  potentiallyChanged(dbName?: DbName): void {
-    super.potentiallyChanged(dbName)
+  _emitPotentialChange(dbName: DbName): PotentialChangeNotification {
+    const notification = super._emitPotentialChange(dbName)
 
-    const dbNames = [...this.dbNames].filter((candidate) => {
-      return dbName !== undefined ? candidate === dbName : true
-    })
+    const method: NotifyMethod = {
+      dbName: dbName,
+      name: '_emitPotentialChange',
+      target: 'notify'
+    }
 
-    dbNames.forEach((dbName) => {
-      const method: NotifyMethod = {
-        dbName: dbName,
-        name: 'potentiallyChanged',
-        target: 'notify'
-      }
+    this.workerClient.notify(method, notification)
 
-      this.workerClient.notify(method, dbName)
-    })
+    return notification
   }
 
   subscribeToDataChanges(callback: ChangeCallback): string {
-    return this.workerClient.subscribeToChanges(callback)
+    const key = super.subscribeToDataChanges(callback)
+    const wrappedCallback = this._changeCallbacks[key]
+
+    return this.workerClient.subscribeToChanges(key, wrappedCallback)
   }
   unsubscribeFromDataChanges(key: string): void {
+    super.unsubscribeFromDataChanges(key)
+
     return this.workerClient.unsubscribeFromChanges(key)
   }
 }

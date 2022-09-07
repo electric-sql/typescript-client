@@ -12,7 +12,7 @@ import {
 
 import { Filesystem } from '../../filesystems/index'
 import { CordovaFilesystem } from '../../filesystems/cordova'
-import { EventNotifier } from '../../notifiers/index'
+import { EventNotifier } from '../../notifiers/event'
 import { globalRegistry } from '../../satellite/registry'
 
 import { Database, ElectricDatabase } from './database'

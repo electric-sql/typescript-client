@@ -11,7 +11,7 @@ import {
 } from '../../electric/index'
 
 import { ReactNativeFilesystem } from '../../filesystems/react-native'
-import { EventNotifier } from '../../notifiers/index'
+import { EventNotifier } from '../../notifiers/event'
 import { globalRegistry } from '../../satellite/registry'
 
 import { Database, ElectricDatabase } from './database'

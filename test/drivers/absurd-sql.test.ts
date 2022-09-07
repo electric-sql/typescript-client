@@ -2,13 +2,9 @@ import test from 'ava'
 
 import Worker from 'web-worker'
 
-import { RequestError, ServerMethod, WorkerClient } from '../../src/bridge/index'
+import { ServerMethod, WorkerClient } from '../../src/bridge/index'
 import { MainThreadDatabaseProxy, MainThreadStatementProxy } from '../../src/drivers/absurd-sql/database'
-import { MockDatabase, MockElectricWorker } from '../../src/drivers/absurd-sql/mock'
-import { QueryAdapter, resultToRows } from '../../src/drivers/absurd-sql/query'
-import { SatelliteDatabaseAdapter } from '../../src/drivers/absurd-sql/satellite'
-import { MockNotifier } from '../../src/notifiers/mock'
-import { QualifiedTablename } from '../../src/util/tablename'
+import { resultToRows } from '../../src/drivers/absurd-sql/query'
 
 const initMethod: ServerMethod = {target: 'server', name: 'init'}
 const openMethod: ServerMethod = {target: 'server', name: 'open'}

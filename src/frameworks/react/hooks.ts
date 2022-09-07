@@ -7,9 +7,26 @@ import { BindParams, Query, Row } from '../../util/types'
 
 import { useElectric } from './provider'
 
-interface TablenameData {
-  tablenames?: QualifiedTablename[],
-  tablenamesKey?: string
+interface ResultData {
+  error?: any,
+  results?: Row[],
+  updatedAt?: Date
+}
+
+const successResult = (results: Row[]): ResultData => {
+  return {
+    error: undefined,
+    results: results,
+    updatedAt: new Date()
+  }
+}
+
+const errorResult = (error: any): ResultData => {
+  return {
+    error: error,
+    results: undefined,
+    updatedAt: new Date()
+  }
 }
 
 // Utility hook for a random value that sets the value to a random
@@ -42,10 +59,10 @@ export const useElectricQuery = (query: Query, params?: BindParams) => {
 
   const [ cacheKey, bustCache ] = useRandom()
   const [ changeSubscriptionKey, setChangeSubscriptionKey ] = useState<string>()
-  const [ { tablenames, tablenamesKey }, setTablenameData ] = useState<TablenameData>({})
-
-  const [ error, setError ] = useState<any>()
-  const [ results, setResults ] = useState<Row[]>()
+  const [ paramsKey, setParamsKey ] = useState<string>()
+  const [ tablenames, setTablenames ] = useState<QualifiedTablename[]>()
+  const [ tablenamesKey, setTablenamesKey ] = useState<string>()
+  const [ resultData, setResultData ] = useState<ResultData>({})
 
   // When the `electric` namespace has been configured on the provider,
   // we use the `queryAdapter` to parse out the query tablenames.
@@ -54,11 +71,14 @@ export const useElectricQuery = (query: Query, params?: BindParams) => {
       return
     }
 
+    const paramsKey = JSON.stringify(params)
     const tablenames = electric.queryAdapter.tableNames(query)
     const tablenamesKey = JSON.stringify(tablenames)
 
-    setTablenameData({ tablenames, tablenamesKey })
-  }, [electric, query])
+    setParamsKey(paramsKey)
+    setTablenames(tablenames)
+    setTablenamesKey(tablenamesKey)
+  }, [electric])
 
   // Once we have the tablenames, we then establish the data change
   // notification subscription, comparing the tablenames used by the
@@ -104,14 +124,14 @@ export const useElectricQuery = (query: Query, params?: BindParams) => {
   // updated whenever a data change notification is recieved that
   // may potentially change the query results.
   useEffect(() => {
-    if (electric === undefined || tablenames === undefined || changeSubscriptionKey === undefined) {
+    if (electric === undefined || changeSubscriptionKey === undefined) {
       return
     }
 
     electric.queryAdapter.perform(query, params)
-      .then((res) => setResults(res))
-      .catch((err) => setError(err))
-  }, [electric, cacheKey, tablenamesKey, JSON.stringify(params)])
+      .then((res) => setResultData(successResult(res)))
+      .catch((err) => setResultData(errorResult(err)))
+  }, [electric, changeSubscriptionKey, cacheKey, paramsKey])
 
-  return [ results, error ] as const
+  return resultData
 }

@@ -61,10 +61,12 @@
   "ava": {
     "timeout": "10m",
     "files": [
-      "test/**/*.test.ts"
+      "test/**/*.test.ts",
+      "test/**/*.test.tsx"
     ],
     "extensions": {
-      "ts": "module"
+      "ts": "module",
+      "tsx": "module"
     },
     "nodeArguments": [
       "--no-warnings",
@@ -79,6 +81,7 @@
   "devDependencies": {
     "@aphro/absurd-sql": "^0.0.53",
     "@aphro/sql.js": "^1.7.0",
+    "@testing-library/react": "^13.4.0",
     "@tsmodule/tsmodule": "^40.0.17",
     "@types/node": "^18.7.13",
     "@types/react": "^18.0.18",
@@ -86,12 +89,14 @@
     "@typescript-eslint/parser": "^5.34.0",
     "ava": "^4.3.1",
     "better-sqlite3": ">= 7.4.0",
+    "browser-env": "^3.3.0",
     "cordova-sqlite-storage": ">= 5.0.0",
     "eslint": "^8.22.0",
     "expo-asset": ">= 8.0.0",
     "expo-file-system": "13.0.0",
     "expo-sqlite": ">= 10.0.0",
     "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-native-fs": ">= 2.17.0",
     "react-native-sqlite-storage": ">= 6.0.0",
     "typeorm": ">=0.3.0",

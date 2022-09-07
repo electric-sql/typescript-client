@@ -166,7 +166,9 @@ test('query adapter perform works', async t => {
   const stmt = db.prepare('select ?')
   const r3 = await adapter.perform(stmt, [2])
 
-  t.deepEqual([r1, r2, r3], [[], [], []])
+  const expectedResults = [{foo: 'bar'}, {foo: 'baz'}]
+
+  t.deepEqual([r1, r2, r3], [expectedResults, expectedResults, expectedResults])
 })
 
 test('query adapter tableNames works', async t => {
@@ -196,5 +198,5 @@ test('satellite client query works', async t => {
 
   const result = await adapter.query('select foo from bars')
 
-  t.deepEqual(result, [])
+  t.deepEqual(result, [{foo: 'bar'}, {foo: 'baz'}])
 })

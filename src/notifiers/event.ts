@@ -201,7 +201,7 @@ export class EventNotifier implements Notifier {
     return dbName === this.dbName || dbName in idx.byName
   }
 
-  // Extracting out these methds allows them to be overridden
+  // Extracting out these methods allows them to be overridden
   // without duplicating any dbName filter / check logic, etc.
   _emitAuthStateChange(authState: AuthState): AuthStateNotification {
     const notification = {

@@ -27,8 +27,8 @@ export interface SatelliteOverrides {
 }
 
 export const satelliteDefaults: SatelliteOpts = {
-  metaTable: new QualifiedTablename('main', '_satellite_meta'),
-  oplogTable: new QualifiedTablename('main', '_oplog'),
+  metaTable: new QualifiedTablename('main', '_electric_meta'),
+  oplogTable: new QualifiedTablename('main', '_electric_oplog'),
   pollingInterval: 2000,
   minSnapshotWindow: 40,
   lastSentRowId: -1,

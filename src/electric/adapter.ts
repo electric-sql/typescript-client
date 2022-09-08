@@ -2,8 +2,8 @@ import { AnyDatabase } from '../drivers/index'
 import { QualifiedTablename } from '../util/tablename'
 import { BindParams, Query, Row } from '../util/types'
 
-// A normalised database adapter adapts a database client to
-// provide the normalised interface defined here.
+// A `DatabaseAdapter` adapts a database client to provide the
+// normalised interface defined here.
 export interface DatabaseAdapter {
   db: AnyDatabase
 

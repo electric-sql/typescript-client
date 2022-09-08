@@ -26,17 +26,27 @@ export type Notification =
 export type AuthStateCallback = (notification: AuthStateNotification) => void
 export type ChangeCallback = (notification: ChangeNotification) => void
 export type PotentialChangeCallback = (notification: PotentialChangeNotification) => void
-export type NotificationCallback = AuthStateCallback | ChangeCallback | PotentialChangeCallback
+
+export type NotificationCallback =
+  AuthStateCallback
+  | ChangeCallback
+  | PotentialChangeCallback
 
 export interface Notifier {
-  // Most database clients just open a single named database.
+  // The name of the primary database that components communicating via this
+  // notifier have open and are using.
   dbName: DbName
 
-  // However, some can attach multiple databases.
+  // Some drivers can attach other open databases and reference them by alias
+  // (i.e.: first you `attach('foo.db')` then you can write SQL queries like
+  // `select * from foo.bars`. We keep track of attached databases and their
+  // aliases, so we can map the table namespaces in SQL queries to their real
+  // database names and thus emit and handle notifications to and from them.
   attach(dbName: DbName, dbAlias: string): void
   detach(dbAlias: string): void
 
-  // We keep track of the attached dbs in two mappings.
+  // Technically, we keep track of the attached dbs in two mappings -- one is
+  // `alias: name`, the other `name: alias`.
   attachedDbIndex: {
     byAlias: {
       [key: string]: DbName
@@ -50,30 +60,33 @@ export interface Notifier {
   // `{attachedDbName, tablenames}` to `aliasedTablenames`.
   alias(notification: ChangeNotification): QualifiedTablename[]
 
-  // Calling `authStateChanged` notifies the Satellite process
-  // with the new authentication credentials.
+  // Calling `authStateChanged` notifies the Satellite process that the
+  // user's authentication credentials have changed.
   authStateChanged(authState: AuthState): void
   subscribeToAuthStateChanges(callback: AuthStateCallback): string
   unsubscribeFromAuthStateChanges(key: string): void
 
-  // The notification workflow starts by the electric database clients
-  // (or the user manually) calling `potentiallyChanged` following
-  // a write or transaction that may have changed the contents of one
-  // or more of the opened/attached databases.
+  // The data change notification workflow starts by the electric database
+  // clients (or the user manually) calling `potentiallyChanged` whenever
+  // a write or transaction has been issued that may have changed the
+  // contents of either the primary or any of the attached databases.
   potentiallyChanged(): void
 
-  // Satellite processes subscribe to *potential* data changes and check
-  // the opslog for *actual* changes as part of the replication machinery.
+  // Satellite processes subscribe to these "data has potentially changed"
+  // notifications. When they get one, they check the `_oplog` table in the
+  // database for *actual* changes persisted by the triggers.
   subscribeToPotentialDataChanges(callback: PotentialChangeCallback): string
   unsubscribeFromPotentialDataChanges(key: string): void
 
-  // When Satellite detects actual data changes in the opslog for a given
-  // database, it calls  `actuallyChanged` with the list of changes.
+  // When Satellite detects actual data changes in the oplog for a given
+  // database, it replicates it and calls  `actuallyChanged` with the list
+  // of changes.
   actuallyChanged(dbName: DbName, changes: Change[]): void
 
-  // Reactive hooks then subscribe to `ActualDataChange` notifications,
-  // using the info about what has actually changed to trigger re-queries.
-  // when (and only when) necessary.
+  // Reactive hooks then subscribe to "data has actually changed" notifications,
+  // using the info to trigger re-queries, iff the changes affect databases and
+  // tables that their queries depend on. This then trigger re-rendering iff
+  // the query results are actually affected by the data changes.
   subscribeToDataChanges(callback: ChangeCallback): string
   unsubscribeFromDataChanges(key: string): void
 }

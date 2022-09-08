@@ -1,6 +1,6 @@
 import { Filesystem } from '../filesystems/index'
 import { Notifier } from '../notifiers/index'
-import { AnyFunction, DbName } from '../util/types'
+import { DbName } from '../util/types'
 
 import { Satellite, SatelliteDatabaseAdapter } from './index'
 
@@ -17,11 +17,15 @@ export class SatelliteProcess implements Satellite {
     this.notifier = notifier
   }
 
-  stop(): Promise<void> {
-    return new Promise((resolve: AnyFunction) => {
-      throw "NotImplemented"
+  async stop(): Promise<void> {
+    // XXX ...
+  }
 
-      resolve()
-    })
+  static async start(dbName: DbName, dbAdapter: SatelliteDatabaseAdapter, fs: Filesystem, notifier: Notifier): Promise<Satellite> {
+    const satellite = new SatelliteProcess(dbName, dbAdapter, fs, notifier)
+
+    // await satellite.startListening()
+
+    return satellite
   }
 }

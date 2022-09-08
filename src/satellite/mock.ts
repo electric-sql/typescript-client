@@ -1,9 +1,12 @@
 import { Filesystem } from '../filesystems/index'
 import { Notifier } from '../notifiers/index'
+import { sleepAsync } from '../util/timer'
 import { DbName } from '../util/types'
-import { Satellite, SatelliteDatabaseAdapter, SatelliteRegistry } from './index'
 
-export class MockSatellite implements Satellite {
+import { Satellite, SatelliteDatabaseAdapter } from './index'
+import { BaseRegistry } from './registry'
+
+export class MockSatelliteProcess implements Satellite {
   dbAdapter: SatelliteDatabaseAdapter
   dbName: DbName
   fs: Filesystem
@@ -16,44 +19,19 @@ export class MockSatellite implements Satellite {
     this.notifier = notifier
   }
 
-  stop(): Promise<void> {
-    return Promise.resolve()
+  async stop(): Promise<void> {
+    await sleepAsync(50)
+  }
+
+  static async start(dbName: DbName, dbAdapter: SatelliteDatabaseAdapter, fs: Filesystem, notifier: Notifier): Promise<Satellite> {
+    await sleepAsync(50)
+
+    return new MockSatelliteProcess(dbName, dbAdapter, fs, notifier)
   }
 }
 
-class MockRegistry implements SatelliteRegistry {
-  _satellites: {
-    [key: DbName]: Satellite
-  }
-
-  constructor() {
-    this._satellites = {}
-  }
-
-  async ensureStarted(dbName: DbName, dbAdapter: SatelliteDatabaseAdapter, fs: Filesystem, notifier: Notifier): Promise<Satellite> {
-    const satellites = this._satellites
-
-    if (!(dbName in satellites)) {
-      satellites[dbName] = new MockSatellite(dbName, dbAdapter, fs, notifier)
-    }
-
-    return satellites[dbName]
-  }
-  async ensureAlreadyStarted(dbName: DbName): Promise<Satellite> {
-    const satellites = this._satellites
-
-    if (!(dbName in satellites)) {
-      throw new Error(`Satellite not running for db: ${dbName}`)
-    }
-
-    return satellites[dbName]
-  }
-  async stop(dbName: DbName): Promise<void> {
-    delete this._satellites[dbName]
-  }
-  async stopAll(): Promise<void> {
-    this._satellites = {}
+export class MockRegistry extends BaseRegistry {
+  startProcess(dbName: DbName, dbAdapter: SatelliteDatabaseAdapter, fs: Filesystem, notifier: Notifier): Promise<Satellite> {
+    return MockSatelliteProcess.start(dbName, dbAdapter, fs, notifier)
   }
 }
-
-export const mockRegistry = new MockRegistry()

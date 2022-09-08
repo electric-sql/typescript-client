@@ -1,7 +1,46 @@
+import { AuthState } from '../auth/index'
 import { AnyDatabase } from '../drivers/index'
 import { Filesystem } from '../filesystems/index'
 import { Notifier } from '../notifiers/index'
+import { QualifiedTablename } from '../util/tablename'
 import { BindParams, DbName, Row } from '../util/types'
+
+export interface OplogEntry {
+  rowid: number,
+  namespace: string,
+  tablename: string,
+  optype: 'INSERT' | 'UPDATE' | 'DELETE' | 'UPSERT',
+  primaryKey: string,
+  timestamp: string,
+  newRow?: string,
+  oldRow?: string
+}
+
+export interface SatelliteOpts {
+  // The database table where Satellite keeps its processing metadata.
+  metaTable: QualifiedTablename,
+  // The database table where change operations are written to by the triggers
+  // automatically added to all tables in the user defined DDL schema.
+  oplogTable: QualifiedTablename,
+  // Polls the database for changes every `pollingInterval` milliseconds.
+  pollingInterval: number,
+  // Throttle snapshotting to once per `minSnapshotWindow` milliseconds.
+  minSnapshotWindow: number,
+  // The last rowid that was *sent to* the server.
+  lastSentRowId: number,
+  // The last rowid that was *acknowledged by* the server.
+  lastAckdRowId: number
+}
+
+// As above but optional.
+export interface SatelliteOverrides {
+  metaTable?: QualifiedTablename,
+  oplogTable?: QualifiedTablename,
+  pollingInterval?: number,
+  minSnapshotWindow?: number,
+  lastSentRowId?: number,
+  lastAckdRowId?: number
+}
 
 // `Satellite` is the main process handling Electric SQL replication.
 //
@@ -17,7 +56,9 @@ export interface Satellite {
   dbName: DbName
   fs: Filesystem
   notifier: Notifier
+  opts: SatelliteOpts
 
+  start(authState?: AuthState): Promise<void>
   stop(): Promise<void>
 }
 
@@ -41,7 +82,7 @@ export interface SatelliteDatabaseAdapter {
 // starts and stops replication processing for every SQLite database
 // that the application is using.
 export interface SatelliteRegistry {
-  ensureStarted(dbName: DbName, dbAdapter: SatelliteDatabaseAdapter, fs: Filesystem, notifier: Notifier): Promise<Satellite>
+  ensureStarted(dbName: DbName, dbAdapter: SatelliteDatabaseAdapter, fs: Filesystem, notifier: Notifier, authState?: AuthState): Promise<Satellite>
   ensureAlreadyStarted(dbName: DbName): Promise<Satellite>
   stop(dbName: DbName): Promise<void>
   stopAll(): Promise<void>

@@ -3,6 +3,7 @@ import { randomValue } from '../util/random'
 import { DbName } from '../util/types'
 
 import {
+  AuthStateNotification,
   Change,
   ChangeCallback,
   ChangeNotification,
@@ -14,8 +15,9 @@ import {
 } from './index'
 
 const EVENT_NAMES = {
-  actualChange: 'actually:changed',
-  potentialChange: 'potentially:changed'
+  authChange: 'auth:changed',
+  actualDataChange: 'data:actually:changed',
+  potentialDataChange: 'data:potentially:changed'
 }
 
 // Global singleton that all event notifiers use by default. Emitting an event
@@ -49,6 +51,29 @@ export class EventNotifier implements Notifier {
     this.dbNames.delete(dbName)
   }
 
+  authStateChanged(authState: AuthState): void {
+    this._emitAuthStateChange(current)
+  }
+  subscribeToAuthStateChanges(callback: AuthStateCallback): string {
+    const key = randomValue()
+
+    this._changeCallbacks[key] = callback
+    this._subscribe(EVENT_NAMES.authChange, callback)
+
+    return key
+  }
+  unsubscribeFromAuthStateChanges(key: string): void {
+    const callback = this._changeCallbacks[key]
+
+    if (callback === undefined) {
+      return
+    }
+
+    this._unsubscribe(EVENT_NAMES.authChange, callback)
+
+    delete this._changeCallbacks[key]
+  }
+
   potentiallyChanged(dbName?: DbName): void {
     const dbNames = this._filterDbNames(dbName)
     const emitPotentialChange = this._emitPotentialChange.bind(this)
@@ -74,7 +99,7 @@ export class EventNotifier implements Notifier {
     }
 
     this._changeCallbacks[key] = wrappedCallback
-    this._subscribe(EVENT_NAMES.potentialChange, wrappedCallback)
+    this._subscribe(EVENT_NAMES.potentialDataChange, wrappedCallback)
 
     return key
   }
@@ -85,7 +110,7 @@ export class EventNotifier implements Notifier {
       return
     }
 
-    this._unsubscribe(EVENT_NAMES.potentialChange, callback)
+    this._unsubscribe(EVENT_NAMES.potentialDataChange, callback)
 
     delete this._changeCallbacks[key]
   }
@@ -101,7 +126,7 @@ export class EventNotifier implements Notifier {
     }
 
     this._changeCallbacks[key] = wrappedCallback
-    this._subscribe(EVENT_NAMES.actualChange, wrappedCallback)
+    this._subscribe(EVENT_NAMES.actualDataChange, wrappedCallback)
 
     return key
   }
@@ -112,7 +137,7 @@ export class EventNotifier implements Notifier {
       return
     }
 
-    this._unsubscribe(EVENT_NAMES.actualChange, callback)
+    this._unsubscribe(EVENT_NAMES.actualDataChange, callback)
 
     delete this._changeCallbacks[key]
   }
@@ -130,14 +155,21 @@ export class EventNotifier implements Notifier {
     return this.dbNames.has(dbName)
   }
 
-  // Extracting out these two methds allows them to be overridden
-  // without duplicating the dbName filter / check logic.
+  // Extracting out these methds allows them to be overridden
+  // without duplicating any dbName filter / check logic, etc.
+  _emitAuthStateChange(authState: AuthState): AuthStateNotification {
+    const notification = {
+      current: current
+    }
+
+    this._emit(EVENT_NAMES.authChange, notification)
+  }
   _emitPotentialChange(dbName: DbName): PotentialChangeNotification {
     const notification = {
       dbName: dbName
     }
 
-    this._emit(EVENT_NAMES.potentialChange, notification)
+    this._emit(EVENT_NAMES.potentialDataChange, notification)
 
     return notification
   }
@@ -147,7 +179,7 @@ export class EventNotifier implements Notifier {
       changes: changes
     }
 
-    this._emit(EVENT_NAMES.actualChange, notification)
+    this._emit(EVENT_NAMES.actualDataChange, notification)
 
     return notification
   }

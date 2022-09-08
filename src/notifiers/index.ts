@@ -1,5 +1,10 @@
+import { AuthState } from '../auth/index'
 import { QualifiedTablename } from '../util/tablename'
 import { DbName, RowId } from '../util/types'
+
+export interface AuthStateNotification {
+  authState: AuthState
+}
 
 export interface Change {
   qualifiedTablename: QualifiedTablename,
@@ -12,8 +17,13 @@ export interface ChangeNotification {
 export interface PotentialChangeNotification {
   dbName: DbName
 }
-export type Notification = ChangeNotification | PotentialChangeNotification
 
+export type Notification =
+  AuthStateNotification
+  | ChangeNotification
+  | PotentialChangeNotification
+
+export type AuthStateCallback = (notification: AuthStateNotification) => void
 export type ChangeCallback = (notification: ChangeNotification) => void
 export type PotentialChangeCallback = (notification: PotentialChangeNotification) => void
 export type NotificationCallback = ChangeCallback | PotentialChangeCallback
@@ -25,6 +35,12 @@ export interface Notifier {
   dbNames: Set<DbName>
   attach(dbName: DbName): void
   detach(dbName: DbName): void
+
+  // Calling `authStateChanged` notifies the Satellite process
+  // with the new authentication credentials.
+  authStateChanged(authState: AuthState): void
+  subscribeToAuthStateChanges(callback: AuthStateCallback): string
+  unsubscribeFromAuthStateChanges(key: string): void
 
   // The notification workflow starts by the electric database clients
   // (or the user manually) calling `potentiallyChanged` following

@@ -135,3 +135,18 @@ test('satellite client query works', async t => {
 
   t.deepEqual(result, [{i: 0}])
 })
+
+test('XXX test the attached namespace thing', async t => {
+  // When you attach a database, it becomes available to your SQL
+  // as a namespace.
+  //
+  // So ... the way we parse out tablenames means we're putting
+  // the dbname in the namespace. Which is maybe OK.
+  //
+  // But then with the notifications, there will be a mismatch
+  // unless we match up the notify expecting the dbname in the
+  // dbName and the hook expecting it in the qualified tablename
+  // namespace.
+
+  t.true(false)
+})

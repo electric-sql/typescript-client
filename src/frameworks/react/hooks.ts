@@ -97,6 +97,23 @@ export const useElectricQuery = (query: Query, params?: BindParams) => {
       const changes = notification.changes
       const changedTablenames = changes.map(change => change.qualifiedTablename)
 
+      console.warn(
+        `
+
+        XXX TODO
+
+        As long as there is a satellite running per attached db,
+        then here we just need to map any non-this.dbName dbNames in the
+        notifications into the namespace of the QT.
+
+        So we can just adapt the \`hasIntersection\` to map the changed
+        tablename "dbName + main.tablename" to match the "dbName.tablename"
+        for any non-main namespaced QTs in our tablenames.
+
+
+        `
+      )
+
       if (hasIntersection(tablenames, changedTablenames)) {
         bustCache()
       }

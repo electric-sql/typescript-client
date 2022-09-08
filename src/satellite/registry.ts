@@ -1,8 +1,10 @@
+import { AuthState } from '../auth/index'
 import { Filesystem } from '../filesystems/index'
 import { Notifier } from '../notifiers/index'
 import { DbName } from '../util/types'
 
-import { Satellite, SatelliteDatabaseAdapter, SatelliteRegistry } from './index'
+import { Satellite, SatelliteDatabaseAdapter, SatelliteOverrides, SatelliteRegistry } from './index'
+import { DEFAULTS } from './config'
 import { SatelliteProcess } from './process'
 
 export abstract class BaseRegistry implements SatelliteRegistry {
@@ -23,11 +25,11 @@ export abstract class BaseRegistry implements SatelliteRegistry {
     this.stoppingPromises = {}
   }
 
-  startProcess(_dbName: DbName, _dbAdapter: SatelliteDatabaseAdapter, _fs: Filesystem, _notifier: Notifier): Promise<Satellite> {
+  startProcess(_dbName: DbName, _dbAdapter: SatelliteDatabaseAdapter, _fs: Filesystem, _notifier: Notifier, _authState?: AuthState): Promise<Satellite> {
     throw `Subclasses must implement startProcess`
   }
 
-  async ensureStarted(dbName: DbName, dbAdapter: SatelliteDatabaseAdapter, fs: Filesystem, notifier: Notifier): Promise<Satellite> {
+  async ensureStarted(dbName: DbName, dbAdapter: SatelliteDatabaseAdapter, fs: Filesystem, notifier: Notifier, authState?: AuthState): Promise<Satellite> {
     // If we're in the process of stopping the satellite process for this
     // dbName, then we wait for the process to be stopped and then we
     // call this function again to retry starting it.
@@ -59,7 +61,7 @@ export abstract class BaseRegistry implements SatelliteRegistry {
     }
 
     // Otherwise we need to fire it up!
-    const startingPromise = this.startProcess(dbName, dbAdapter, fs, notifier)
+    const startingPromise = this.startProcess(dbName, dbAdapter, fs, notifier, authState)
       .then((satellite) => {
         delete startingPromises[dbName]
 
@@ -137,8 +139,20 @@ export abstract class BaseRegistry implements SatelliteRegistry {
 }
 
 export class GlobalRegistry extends BaseRegistry {
-  startProcess(dbName: DbName, dbAdapter: SatelliteDatabaseAdapter, fs: Filesystem, notifier: Notifier): Promise<Satellite> {
-    return SatelliteProcess.start(dbName, dbAdapter, fs, notifier)
+  startProcess(
+        dbName: DbName,
+        dbAdapter: SatelliteDatabaseAdapter,
+        fs: Filesystem,
+        notifier: Notifier,
+        authState?: AuthState,
+        overrides?: SatelliteOverrides
+      ): Promise<Satellite> {
+    const opts = {...DEFAULTS, ...overrides}
+
+    const satellite = new SatelliteProcess(dbName, dbAdapter, fs, notifier, opts)
+    await satellite.start(authState)
+
+    return satellite
   }
 }
 

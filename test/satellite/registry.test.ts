@@ -1,18 +1,16 @@
 import test from 'ava'
 
-import { Filesystem } from '../../src/filesystems/index'
+import { DatabaseAdapter } from '../../src/electric/adapter'
+import { Migrator } from '../../src/migrators/index'
 import { Notifier } from '../../src/notifiers/index'
-
-import { SatelliteDatabaseAdapter } from '../../src/satellite/index'
 import { MockSatelliteProcess, MockRegistry } from '../../src/satellite/mock'
-
 import { DbName } from '../../src/util/types'
 
 const dbName = 'test.db'
-const dbAdapter = {} as SatelliteDatabaseAdapter
-const fs = {} as Filesystem
+const adapter = {} as DatabaseAdapter
+const migrator = {} as Migrator
 const notifier = {} as Notifier
-const args = [dbName, dbAdapter, fs, notifier]
+const args = [dbName, adapter, migrator, notifier]
 
 test('starting a satellite process works', async t => {
   const mockRegistry = new MockRegistry()
@@ -23,9 +21,9 @@ test('starting a satellite process works', async t => {
 
 test('starting multiple satellite processes works', async t => {
   const mockRegistry = new MockRegistry()
-  const s1 = await mockRegistry.startProcess('a.db', dbAdapter, fs, notifier)
-  const s2 = await mockRegistry.startProcess('b.db', dbAdapter, fs, notifier)
-  const s3 = await mockRegistry.startProcess('c.db', dbAdapter, fs, notifier)
+  const s1 = await mockRegistry.startProcess('a.db', adapter, migrator, notifier)
+  const s2 = await mockRegistry.startProcess('b.db', adapter, migrator, notifier)
+  const s3 = await mockRegistry.startProcess('c.db', adapter, migrator, notifier)
 
   t.true(s1 instanceof MockSatelliteProcess)
   t.true(s2 instanceof MockSatelliteProcess)
@@ -41,9 +39,9 @@ test('ensure satellite process started works', async t => {
 
 test('ensure starting multiple satellite processes works', async t => {
   const mockRegistry = new MockRegistry()
-  const s1 = await mockRegistry.ensureStarted('a.db', dbAdapter, fs, notifier)
-  const s2 = await mockRegistry.ensureStarted('b.db', dbAdapter, fs, notifier)
-  const s3 = await mockRegistry.ensureStarted('c.db', dbAdapter, fs, notifier)
+  const s1 = await mockRegistry.ensureStarted('a.db', adapter, migrator, notifier)
+  const s2 = await mockRegistry.ensureStarted('b.db', adapter, migrator, notifier)
+  const s3 = await mockRegistry.ensureStarted('c.db', adapter, migrator, notifier)
 
   t.true(s1 instanceof MockSatelliteProcess)
   t.true(s2 instanceof MockSatelliteProcess)
@@ -116,9 +114,9 @@ test('stop works if starting', async t => {
 test('stopAll works', async t => {
   const mockRegistry = new MockRegistry()
   const [s1, s2, s3] = await Promise.all([
-    mockRegistry.ensureStarted('a.db', dbAdapter, fs, notifier),
-    mockRegistry.ensureStarted('b.db', dbAdapter, fs, notifier),
-    mockRegistry.ensureStarted('c.db', dbAdapter, fs, notifier)
+    mockRegistry.ensureStarted('a.db', adapter, migrator, notifier),
+    mockRegistry.ensureStarted('b.db', adapter, migrator, notifier),
+    mockRegistry.ensureStarted('c.db', adapter, migrator, notifier)
   ])
   await mockRegistry.stopAll()
 
@@ -128,9 +126,9 @@ test('stopAll works', async t => {
 test('stopAll works even when starting', async t => {
   const mockRegistry = new MockRegistry()
   const startPromises = [
-    mockRegistry.ensureStarted('a.db', dbAdapter, fs, notifier),
-    mockRegistry.ensureStarted('b.db', dbAdapter, fs, notifier),
-    mockRegistry.ensureStarted('c.db', dbAdapter, fs, notifier)
+    mockRegistry.ensureStarted('a.db', adapter, migrator, notifier),
+    mockRegistry.ensureStarted('b.db', adapter, migrator, notifier),
+    mockRegistry.ensureStarted('c.db', adapter, migrator, notifier)
   ]
 
   await mockRegistry.stopAll()
@@ -142,13 +140,13 @@ test('stopAll works even when starting', async t => {
 
 test('stopAll works across running, stopping and starting', async t => {
   const mockRegistry = new MockRegistry()
-  await mockRegistry.ensureStarted('a.db', dbAdapter, fs, notifier)
-  await mockRegistry.ensureStarted('b.db', dbAdapter, fs, notifier)
-  const p1 = mockRegistry.ensureStarted('c.db', dbAdapter, fs, notifier)
-  const p2 = mockRegistry.ensureStarted('d.db', dbAdapter, fs, notifier)
+  await mockRegistry.ensureStarted('a.db', adapter, migrator, notifier)
+  await mockRegistry.ensureStarted('b.db', adapter, migrator, notifier)
+  const p1 = mockRegistry.ensureStarted('c.db', adapter, migrator, notifier)
+  const p2 = mockRegistry.ensureStarted('d.db', adapter, migrator, notifier)
 
-  const p3 = mockRegistry.stop('a.db', dbAdapter, fs, notifier)
-  const p4 = mockRegistry.stop('c.db', dbAdapter, fs, notifier)
+  const p3 = mockRegistry.stop('a.db', adapter, migrator, notifier)
+  const p4 = mockRegistry.stop('c.db', adapter, migrator, notifier)
 
   await mockRegistry.stopAll()
   t.deepEqual(mockRegistry.satellites, {})

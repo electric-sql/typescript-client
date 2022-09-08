@@ -42,7 +42,7 @@ export const useRandom = () => {
 // Main reactive query hook for React applications. It needs to be
 // used in tandem with the `ElectricProvider` in `./provider` which
 // sets an `ElectricNamespace` as the `electric` value. This provides
-// a queryAdapter and notifier which this hook uses to:
+// a adapter and notifier which this hook uses to:
 //
 // 1. parse the tablenames out of the query (which can be a string or
 //    an object, depending on your driver/framework of choice)
@@ -65,14 +65,14 @@ export const useElectricQuery = (query: Query, params?: BindParams) => {
   const [ resultData, setResultData ] = useState<ResultData>({})
 
   // When the `electric` namespace has been configured on the provider,
-  // we use the `queryAdapter` to parse out the query tablenames.
+  // we use the `adapter` to parse out the query tablenames.
   useEffect(() => {
     if (electric === undefined) {
       return
     }
 
     const paramsKey = JSON.stringify(params)
-    const tablenames = electric.queryAdapter.tableNames(query)
+    const tablenames = electric.adapter.tableNames(query)
     const tablenamesKey = JSON.stringify(tablenames)
 
     setParamsKey(paramsKey)
@@ -93,33 +93,16 @@ export const useElectricQuery = (query: Query, params?: BindParams) => {
       return
     }
 
+    const notifier = electric.notifier
+
     const handleChange = (notification: ChangeNotification): void => {
-      const changes = notification.changes
-      const changedTablenames = changes.map(change => change.qualifiedTablename)
-
-      console.warn(
-        `
-
-        XXX TODO
-
-        As long as there is a satellite running per attached db,
-        then here we just need to map any non-this.dbName dbNames in the
-        notifications into the namespace of the QT.
-
-        So we can just adapt the \`hasIntersection\` to map the changed
-        tablename "dbName + main.tablename" to match the "dbName.tablename"
-        for any non-main namespaced QTs in our tablenames.
-
-
-        `
-      )
+      const changedTablenames = notifier.alias(notification)
 
       if (hasIntersection(tablenames, changedTablenames)) {
         bustCache()
       }
     }
 
-    const notifier = electric.notifier
     const key = notifier.subscribeToDataChanges(handleChange)
 
     if (changeSubscriptionKey !== undefined) {
@@ -145,7 +128,7 @@ export const useElectricQuery = (query: Query, params?: BindParams) => {
       return
     }
 
-    electric.queryAdapter.perform(query, params)
+    electric.adapter.query(query, params)
       .then((res) => setResultData(successResult(res)))
       .catch((err) => setResultData(errorResult(err)))
   }, [electric, changeSubscriptionKey, cacheKey, paramsKey])

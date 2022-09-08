@@ -1,23 +1,35 @@
 import throttle from 'lodash.throttle'
 
 import { AuthState } from '../auth/index'
-import { Filesystem } from '../filesystems/index'
-import { Change, ChangeNotification, Notifier } from '../notifiers/index'
+import { DatabaseAdapter } from '../electric/adapter'
+import { Migrator } from '../migrators/index'
+import { AuthStateNotification, Change, Notifier } from '../notifiers/index'
+import { QualifiedTablename } from '../util/tablename'
 import { DbName } from '../util/types'
 
-import {
-  OplogEntry,
-  Satellite,
-  SatelliteDatabaseAdapter,
-  SatelliteOpts,
-  SatelliteOverrides
-} from './index'
-import { DEFAULTS, OPERATIONS } from './config'
+import { Satellite } from './index'
+import { SatelliteOpts } from './config'
+
+type ChangeAccumulator = {
+  [key: string]: Change
+}
+
+// Oplog table schema.
+export interface OplogEntry {
+  rowid: number,
+  namespace: string,
+  tablename: string,
+  optype: 'INSERT' | 'UPDATE' | 'DELETE' | 'UPSERT',
+  primaryKey: string,
+  timestamp: string,
+  newRow?: string,
+  oldRow?: string
+}
 
 export class SatelliteProcess implements Satellite {
   dbName: DbName
-  dbAdapter: SatelliteDatabaseAdapter
-  fs: Filesystem
+  adapter: DatabaseAdapter
+  migrator: Migrator
   notifier: Notifier
   opts: SatelliteOpts
 
@@ -25,14 +37,14 @@ export class SatelliteProcess implements Satellite {
   _authStateSubscription?: string
 
   _lastSnapshotTimestamp?: Date
-  _pollingInterval?: string
+  _pollingInterval?: any
   _potentialDataChangeSubscription?: string
   _throttledSnapshot: () => void
 
-  constructor(dbName: DbName, dbAdapter: SatelliteDatabaseAdapter, fs: Filesystem, notifier: Notifier, opts: SatelliteOpts) {
+  constructor(dbName: DbName, adapter: DatabaseAdapter, migrator: Migrator, notifier: Notifier, opts: SatelliteOpts) {
     this.dbName = dbName
-    this.dbAdapter = dbAdapter
-    this.fs = fs
+    this.adapter = adapter
+    this.migrator = migrator
     this.notifier = notifier
     this.opts = opts
 
@@ -88,7 +100,7 @@ export class SatelliteProcess implements Satellite {
 
     if (this._potentialDataChangeSubscription !== undefined) {
       this.notifier.unsubscribeFromPotentialDataChanges(this._potentialDataChangeSubscription)
-      this._potentialDataChangeSubscriptionKey = undefined
+      this._potentialDataChangeSubscription = undefined
     }
   }
 
@@ -98,7 +110,7 @@ export class SatelliteProcess implements Satellite {
   // need to actually replicate the data changes ...
   async _performSnapshot(): Promise<void> {
     const lastAckd = this.opts.lastAckdRowId
-    const oplog = this.opts.oplogTable
+    const oplog = this.opts.oplogTable.toString()
     const timestamp = new Date().toISOString()
 
     const updateTimestamps = `
@@ -117,8 +129,9 @@ export class SatelliteProcess implements Satellite {
         ORDER BY rowid ASC
     `
 
-    await this.dbAdapter.exec(updateTimestamps)
-    const results = await this.dbAdapter.query(selectChanges, [oplog, timestamp])
+    await this.adapter.run(updateTimestamps)
+    const rows = await this.adapter.query(selectChanges, [oplog, timestamp])
+    const results = rows as unknown as OplogEntry[]
 
     await Promise.all([
       this._notifyChanges(results),
@@ -127,16 +140,22 @@ export class SatelliteProcess implements Satellite {
   }
 
   async _notifyChanges(results: OplogEntry[]): Promise<void> {
-    const acc: {[key: string]: Change} = {}
+    const acc: ChangeAccumulator = {}
 
     // Would it be quicker to do this using a second SQL query that
     // returns results in `Change` format?!
-    const reduceFn = (acc, entry) => {
+    const reduceFn = (acc: ChangeAccumulator, entry: OplogEntry) => {
       const qt = new QualifiedTablename(entry.namespace, entry.tablename)
       const key = qt.toString()
 
       if (key in acc) {
-        acc[key].rowids.push(entry.rowid)
+        const change: Change = acc[key]
+
+        if (change.rowids === undefined) {
+          change.rowids = []
+        }
+
+        change.rowids.push(entry.rowid)
       }
       else {
         acc[key] = {
@@ -149,15 +168,10 @@ export class SatelliteProcess implements Satellite {
     }
 
     const changes = Object.values(results.reduce(reduceFn, acc))
-    const notification: ChangeNotification = {
-      dbName: this.dbName,
-      changes: changes
-    }
-
-    this.notifier.actuallyChanged(notification)
+    this.notifier.actuallyChanged(this.dbName, changes)
   }
 
-  async _replicateChanges(results: OplogEntry[]): Promise<void> {
+  async _replicateChanges(_results: OplogEntry[]): Promise<void> {
     // XXX integrate replication here ...
   }
 
@@ -172,8 +186,8 @@ export class SatelliteProcess implements Satellite {
   }
 
   async _verifyTableStructure(): Promise<boolean> {
-    const meta = this.opts.metaTable
-    const oplog = this.opts.oplogTable
+    const meta = this.opts.metaTable.toString()
+    const oplog = this.opts.oplogTable.toString()
 
     const tablesExist = `
       SELECT count(name) as numTables FROM sqlite_master
@@ -181,7 +195,7 @@ export class SatelliteProcess implements Satellite {
           AND name IN (?, ?)
     `
 
-    const [{ numTables }] = await this.dbAdapter.query(tablesExist, [meta, oplog])
+    const [{ numTables }] = await this.adapter.query(tablesExist, [meta, oplog])
     return numTables === 2
   }
 }

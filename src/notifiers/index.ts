@@ -26,15 +26,29 @@ export type Notification =
 export type AuthStateCallback = (notification: AuthStateNotification) => void
 export type ChangeCallback = (notification: ChangeNotification) => void
 export type PotentialChangeCallback = (notification: PotentialChangeNotification) => void
-export type NotificationCallback = ChangeCallback | PotentialChangeCallback
+export type NotificationCallback = AuthStateCallback | ChangeCallback | PotentialChangeCallback
 
 export interface Notifier {
-  // Most database clients just open a single named database. However,
-  // some can attach multiple databases. We keep track of this in the
-  // set of `dbNames` by providing attach and detach methods.
-  dbNames: Set<DbName>
-  attach(dbName: DbName): void
-  detach(dbName: DbName): void
+  // Most database clients just open a single named database.
+  dbName: DbName
+
+  // However, some can attach multiple databases.
+  attach(dbName: DbName, dbAlias: string): void
+  detach(dbAlias: string): void
+
+  // We keep track of the attached dbs in two mappings.
+  attachedDbIndex: {
+    byAlias: {
+      [key: string]: DbName
+    },
+    byName: {
+      [key: DbName]: string
+    }
+  }
+
+  // And we provide a helper method to alias changes in the form
+  // `{attachedDbName, tablenames}` to `aliasedTablenames`.
+  alias(notification: ChangeNotification): QualifiedTablename[]
 
   // Calling `authStateChanged` notifies the Satellite process
   // with the new authentication credentials.
@@ -45,10 +59,8 @@ export interface Notifier {
   // The notification workflow starts by the electric database clients
   // (or the user manually) calling `potentiallyChanged` following
   // a write or transaction that may have changed the contents of one
-  // or more of the opened/attached databases. If `dbName` is provided,
-  // it restricts the potential change to the named database (as long)
-  // as it is in the set of `this.dbNames`.
-  potentiallyChanged(dbName?: DbName): void
+  // or more of the opened/attached databases.
+  potentiallyChanged(): void
 
   // Satellite processes subscribe to *potential* data changes and check
   // the opslog for *actual* changes as part of the replication machinery.

@@ -1,13 +1,14 @@
 import { AuthState } from '../auth/index'
-import { Filesystem } from '../filesystems/index'
+import { DatabaseAdapter } from '../electric/adapter'
+import { Migrator } from '../migrators/index'
 import { Notifier } from '../notifiers/index'
 import { DbName } from '../util/types'
 
-import { Satellite, SatelliteDatabaseAdapter, SatelliteOverrides, SatelliteRegistry } from './index'
-import { DEFAULTS } from './config'
+import { Satellite, Registry } from './index'
+import { SatelliteOverrides, satelliteDefaults } from './config'
 import { SatelliteProcess } from './process'
 
-export abstract class BaseRegistry implements SatelliteRegistry {
+export abstract class BaseRegistry implements Registry {
   satellites: {
     [key: DbName]: Satellite
   }
@@ -25,18 +26,18 @@ export abstract class BaseRegistry implements SatelliteRegistry {
     this.stoppingPromises = {}
   }
 
-  startProcess(_dbName: DbName, _dbAdapter: SatelliteDatabaseAdapter, _fs: Filesystem, _notifier: Notifier, _authState?: AuthState): Promise<Satellite> {
+  startProcess(..._args: any[]): Promise<Satellite> {
     throw `Subclasses must implement startProcess`
   }
 
-  async ensureStarted(dbName: DbName, dbAdapter: SatelliteDatabaseAdapter, fs: Filesystem, notifier: Notifier, authState?: AuthState): Promise<Satellite> {
+  async ensureStarted(dbName: DbName, adapter: DatabaseAdapter, migrator: Migrator, notifier: Notifier, authState?: AuthState): Promise<Satellite> {
     // If we're in the process of stopping the satellite process for this
     // dbName, then we wait for the process to be stopped and then we
     // call this function again to retry starting it.
     const stoppingPromises = this.stoppingPromises
     const stopping = stoppingPromises[dbName]
     if (stopping !== undefined) {
-      return stopping.then(() => this.ensureStarted(dbName, dbAdapter, fs, notifier))
+      return stopping.then(() => this.ensureStarted(dbName, adapter, migrator, notifier))
     }
 
     // If we're in the process of starting the satellite process for this
@@ -61,7 +62,7 @@ export abstract class BaseRegistry implements SatelliteRegistry {
     }
 
     // Otherwise we need to fire it up!
-    const startingPromise = this.startProcess(dbName, dbAdapter, fs, notifier, authState)
+    const startingPromise = this.startProcess(dbName, adapter, migrator, notifier, authState)
       .then((satellite) => {
         delete startingPromises[dbName]
 
@@ -139,17 +140,17 @@ export abstract class BaseRegistry implements SatelliteRegistry {
 }
 
 export class GlobalRegistry extends BaseRegistry {
-  startProcess(
+  async startProcess(
         dbName: DbName,
-        dbAdapter: SatelliteDatabaseAdapter,
-        fs: Filesystem,
+        adapter: DatabaseAdapter,
+        migrator: Migrator,
         notifier: Notifier,
         authState?: AuthState,
         overrides?: SatelliteOverrides
       ): Promise<Satellite> {
-    const opts = {...DEFAULTS, ...overrides}
+    const opts = {...satelliteDefaults, ...overrides}
 
-    const satellite = new SatelliteProcess(dbName, dbAdapter, fs, notifier, opts)
+    const satellite = new SatelliteProcess(dbName, adapter, migrator, notifier, opts)
     await satellite.start(authState)
 
     return satellite

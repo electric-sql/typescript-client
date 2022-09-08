@@ -1,8 +1,12 @@
 import { EventEmitter } from 'events'
+
+import { AuthState } from '../auth/index'
 import { randomValue } from '../util/random'
+import { QualifiedTablename } from '../util/tablename'
 import { DbName } from '../util/types'
 
 import {
+  AuthStateCallback,
   AuthStateNotification,
   Change,
   ChangeCallback,
@@ -26,15 +30,29 @@ const EVENT_NAMES = {
 const globalEmitter = new EventEmitter()
 
 export class EventNotifier implements Notifier {
-  dbNames: Set<DbName>
+  dbName: DbName
+
+  attachedDbIndex: {
+    byAlias: {
+      [key: string]: DbName
+    },
+    byName: {
+      [key: DbName]: string
+    }
+  }
+
   events: EventEmitter
 
   _changeCallbacks: {
     [key: string]: NotificationCallback
   }
 
-  constructor(dbNames: DbName | DbName[], eventEmitter?: EventEmitter) {
-    this.dbNames = new Set(Array.isArray(dbNames) ? dbNames : [dbNames])
+  constructor(dbName: DbName, eventEmitter?: EventEmitter) {
+    this.dbName = dbName
+    this.attachedDbIndex = {
+      byAlias: {},
+      byName: {}
+    }
 
     this.events = eventEmitter !== undefined
       ? eventEmitter
@@ -43,16 +61,46 @@ export class EventNotifier implements Notifier {
     this._changeCallbacks = {}
   }
 
-  attach(dbName: DbName): void {
-    this.dbNames.add(dbName)
+  attach(dbName: DbName, dbAlias: string): void {
+    const idx = this.attachedDbIndex
+
+    idx.byAlias[dbAlias] = dbName
+    idx.byName[dbName] = dbAlias
   }
 
-  detach(dbName: DbName): void {
-    this.dbNames.delete(dbName)
+  detach(dbAlias: string): void {
+    const idx = this.attachedDbIndex
+
+    if (dbAlias in idx.byAlias) {
+      const dbName = idx.byAlias[dbAlias]
+
+      delete idx.byAlias[dbAlias]
+      delete idx.byName[dbName]
+    }
+  }
+
+  alias({ dbName, changes }: ChangeNotification): QualifiedTablename[] {
+    const idx = this.attachedDbIndex
+    const primaryDbName = this.dbName
+
+    return changes
+      .map(({ qualifiedTablename }): QualifiedTablename | void => {
+        if (dbName === primaryDbName) {
+          return qualifiedTablename
+        }
+
+        const dbAlias = idx.byName[dbName]
+        if (dbAlias !== undefined) {
+          qualifiedTablename.namespace = dbAlias
+
+          return qualifiedTablename
+        }
+      })
+      .filter((value) => value !== undefined) as QualifiedTablename[]
   }
 
   authStateChanged(authState: AuthState): void {
-    this._emitAuthStateChange(current)
+    this._emitAuthStateChange(authState)
   }
   subscribeToAuthStateChanges(callback: AuthStateCallback): string {
     const key = randomValue()
@@ -74,8 +122,8 @@ export class EventNotifier implements Notifier {
     delete this._changeCallbacks[key]
   }
 
-  potentiallyChanged(dbName?: DbName): void {
-    const dbNames = this._filterDbNames(dbName)
+  potentiallyChanged(): void {
+    const dbNames = this._getDbNames()
     const emitPotentialChange = this._emitPotentialChange.bind(this)
 
     dbNames.forEach(emitPotentialChange)
@@ -142,27 +190,27 @@ export class EventNotifier implements Notifier {
     delete this._changeCallbacks[key]
   }
 
-  _filterDbNames(dbName?: DbName): DbName[] {
-    const dbNames = [...this.dbNames]
+  _getDbNames(): DbName[] {
+    const idx = this.attachedDbIndex
 
-    if (dbName === undefined) {
-      return dbNames
-    }
-
-    return dbNames.filter((candidate) => candidate === dbName)
+    return [this.dbName, ...Object.keys(idx.byName)]
   }
   _hasDbName(dbName: DbName): boolean {
-    return this.dbNames.has(dbName)
+    const idx = this.attachedDbIndex
+
+    return dbName === this.dbName || dbName in idx.byName
   }
 
   // Extracting out these methds allows them to be overridden
   // without duplicating any dbName filter / check logic, etc.
   _emitAuthStateChange(authState: AuthState): AuthStateNotification {
     const notification = {
-      current: current
+      authState: authState
     }
 
     this._emit(EVENT_NAMES.authChange, notification)
+
+    return notification
   }
   _emitPotentialChange(dbName: DbName): PotentialChangeNotification {
     const notification = {

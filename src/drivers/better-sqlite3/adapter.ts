@@ -19,7 +19,7 @@ export class DatabaseAdapter implements DatabaseAdapterInterface {
     await this.db.exec(sql)
   }
 
-  async query(query: Query, bindParams: BindParams): Promise<Row[]> {
+  async query(query: Query, bindParams: BindParams = []): Promise<Row[]> {
     const stmt: Statement = typeof query === 'string'
       ? this.db.prepare(query)
       : query

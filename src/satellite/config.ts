@@ -34,10 +34,3 @@ export const satelliteDefaults: SatelliteOpts = {
   lastSentRowId: -1,
   lastAckdRowId: -1
 }
-
-export const OPERATION_NAMES = {
-  insert: 'INSERT',
-  update: 'UPDATE',
-  delete: 'DELETE',
-  upsert: 'UPSERT'
-}

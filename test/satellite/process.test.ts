@@ -35,11 +35,6 @@ test.beforeEach(t => {
   const timestamp = new Date().getTime()
 
   const runMigrations = async () => {
-    const sql = await readFile('./test/support/migration.test.sql', {encoding: 'utf8'})
-    await adapter.run(sql)
-  }
-
-  const runCompensations = async () => {
     const sql = await readFile('./test/support/compensation.test.sql', {encoding: 'utf8'})
     await adapter.run(sql)
   }
@@ -50,7 +45,6 @@ test.beforeEach(t => {
     adapter,
     migrator,
     notifier,
-    runCompensations,
     runMigrations,
     satellite,
     tableInfo,
@@ -59,20 +53,20 @@ test.beforeEach(t => {
 })
 
 test.afterEach.always(async t => {
-  const { dbName } = t.context
+  const { dbName } = t.context as any
 
   await removeFile(dbName, {force: true})
   await removeFile(`${dbName}-journal`, {force: true})
 })
 
 test('setup starts a satellite process', async t => {
-  const { satellite } = t.context
+  const { satellite } = t.context as any
 
   t.true(satellite instanceof SatelliteProcess)
 })
 
 test('start requires system tables', async t => {
-  const { satellite } = t.context
+  const { satellite } = t.context as any
 
   await t.throwsAsync(satellite.start(), {
     message: 'Invalid database schema. You need to run valid Electric SQL migrations.'
@@ -80,7 +74,7 @@ test('start requires system tables', async t => {
 })
 
 test('start works after running migrations', async t => {
-  const { satellite, runMigrations } = t.context
+  const { satellite, runMigrations } = t.context as any
 
   await runMigrations()
   await satellite.start()
@@ -90,35 +84,35 @@ test('start works after running migrations', async t => {
 })
 
 test('load metadata', async t => {
-  const { adapter, runMigrations } = t.context
+  const { adapter, runMigrations } = t.context as any
   await runMigrations()
 
   const meta = await loadSatelliteMetaTable(adapter)
-  t.deepEqual(meta, {ackRowId: '-1', currRowId: '-1'})
+  t.deepEqual(meta, { ackRowId: '-1', currRowId: '-1', compensations: '0' })
 })
 
 test('cannot UPDATE primary key', async t => {
-  const { adapter, runMigrations } = t.context
+  const { adapter, runMigrations } = t.context as any
   await runMigrations()
 
-  await adapter.run(`INSERT INTO items(id) VALUES ('1'),('2')`)
-  await t.throwsAsync(adapter.run(`UPDATE items SET id='3' WHERE id = '1'`), {
+  await adapter.run(`INSERT INTO parent(id) VALUES ('1'),('2')`)
+  await t.throwsAsync(adapter.run(`UPDATE parent SET id='3' WHERE id = '1'`), {
     code: 'SQLITE_CONSTRAINT_TRIGGER'
   })
 })
 
 test('snapshot works', async t => {
-  const { adapter, notifier, runMigrations, satellite } = t.context
+  const { adapter, notifier, runMigrations, satellite } = t.context as any
   await runMigrations()
 
-  await adapter.run(`INSERT INTO items(id) VALUES ('1'),('2')`)
+  await adapter.run(`INSERT INTO parent(id) VALUES ('1'),('2')`)
   await satellite._performSnapshot()
 
   t.is(notifier.notifications.length, 1)
 
   const { changes } = notifier.notifications[0]
   const expectedChange = {
-    qualifiedTablename: new QualifiedTablename('main', 'items'),
+    qualifiedTablename: new QualifiedTablename('main', 'parent'),
     rowids: [1, 2]
   }
 
@@ -126,13 +120,13 @@ test('snapshot works', async t => {
 })
 
 test('throttled snapshot respects window', async t => {
-  const { adapter, notifier, runMigrations, satellite } = t.context
+  const { adapter, notifier, runMigrations, satellite } = t.context as any
   await runMigrations()
 
   await satellite._throttledSnapshot()
   t.is(notifier.notifications.length, 0)
 
-  await adapter.run(`INSERT INTO items(id) VALUES ('1'),('2')`)
+  await adapter.run(`INSERT INTO parent(id) VALUES ('1'),('2')`)
   await satellite._throttledSnapshot()
 
   t.is(notifier.notifications.length, 0)
@@ -143,10 +137,10 @@ test('throttled snapshot respects window', async t => {
 })
 
 test('starting and stopping the process works', async t => {
-  const { adapter, notifier, runMigrations, satellite } = t.context
+  const { adapter, notifier, runMigrations, satellite } = t.context as any
   await runMigrations()
 
-  await adapter.run(`INSERT INTO items(id) VALUES ('1'),('2')`)
+  await adapter.run(`INSERT INTO parent(id) VALUES ('1'),('2')`)
 
   await satellite.start()
   t.is(notifier.notifications.length, 0)
@@ -155,13 +149,13 @@ test('starting and stopping the process works', async t => {
 
   t.is(notifier.notifications.length, 1)
 
-  await adapter.run(`INSERT INTO items(id) VALUES ('3'),('4')`)
+  await adapter.run(`INSERT INTO parent(id) VALUES ('3'),('4')`)
   await sleepAsync(opts.pollingInterval)
 
   t.is(notifier.notifications.length, 2)
 
   await satellite.stop()
-  await adapter.run(`INSERT INTO items(id) VALUES ('5'),('6')`)
+  await adapter.run(`INSERT INTO parent(id) VALUES ('5'),('6')`)
   await sleepAsync(opts.pollingInterval)
 
   t.is(notifier.notifications.length, 2)
@@ -173,10 +167,10 @@ test('starting and stopping the process works', async t => {
 })
 
 test('snapshots on potential data change', async t => {
-  const { adapter, notifier, runMigrations, satellite } = t.context
+  const { adapter, notifier, runMigrations } = t.context as any
   await runMigrations()
 
-  await adapter.run(`INSERT INTO items(id) VALUES ('1'),('2')`)
+  await adapter.run(`INSERT INTO parent(id) VALUES ('1'),('2')`)
 
   t.is(notifier.notifications.length, 0)
 
@@ -189,44 +183,44 @@ test('snapshots on potential data change', async t => {
 // If last operation is a DELETE, concurrent INSERT shall resurrect deleted
 // values as in 'INSERT wins over DELETE and restored deleted values'
 test('snapshot of INSERT after DELETE', async t => {
-  const { adapter, runMigrations, satellite } = t.context
+  const { adapter, runMigrations, satellite } = t.context as any
   await runMigrations()
 
-  await adapter.run(`INSERT INTO items(id, value) VALUES (1,'val1')`)
-  await adapter.run(`DELETE FROM items WHERE id=1`)
-  await adapter.run(`INSERT INTO items(id) VALUES (1)`)
+  await adapter.run(`INSERT INTO parent(id, value) VALUES (1,'val1')`)
+  await adapter.run(`DELETE FROM parent WHERE id=1`)
+  await adapter.run(`INSERT INTO parent(id) VALUES (1)`)
 
   await satellite._performSnapshot()
   const entries = await satellite._getEntries()
 
   const merged = operationsToTableChanges(entries)
-  const changes = merged['main.items']['1'].changes
+  const changes = merged['main.parent']['1'].changes
   const resultingValue = changes.value.value
 
   t.is(resultingValue, null)
 })
 
 test('take snapshot and merge local wins', async t => {
-  const { adapter, runMigrations, satellite, tableInfo } = t.context
+  const { adapter, runMigrations, satellite, tableInfo } = t.context as any
   await runMigrations()
 
   const incomingTs = new Date().getTime()
-  const incomingEntry = generateOplogEntry(tableInfo, 'main', 'items', OPTYPES.insert, incomingTs, {
+  const incomingEntry = generateOplogEntry(tableInfo, 'main', 'parent', OPTYPES.insert, incomingTs, {
     id: 1,
     value: 'incoming',
   })
 
-  await adapter.run(`INSERT INTO items(id, value, otherValue) VALUES (1, 'local', 1)`)
+  await adapter.run(`INSERT INTO parent(id, value, otherValue) VALUES (1, 'local', 1)`)
   await satellite._performSnapshot()
 
   const local = await satellite._getEntries()
   const localTimestamp = new Date(local[0].timestamp).getTime()
   const merged = satellite._mergeEntries(local, [incomingEntry])
-  const item = merged['main.items']['1']
+  const item = merged['main.parent']['1']
 
   t.deepEqual(item, {
     namespace: 'main',
-    tablename: 'items',
+    tablename: 'parent',
     primaryKeys: {id: 1},
     optype: OPTYPES.upsert,
     changes: {
@@ -238,27 +232,27 @@ test('take snapshot and merge local wins', async t => {
 })
 
 test('take snapshot and merge incoming wins', async t => {
-  const { adapter, runMigrations, satellite, tableInfo } = t.context
+  const { adapter, runMigrations, satellite, tableInfo } = t.context as any
   await runMigrations()
 
-  await adapter.run(`INSERT INTO items(id, value, otherValue) VALUES (1, 'local', 1)`)
+  await adapter.run(`INSERT INTO parent(id, value, otherValue) VALUES (1, 'local', 1)`)
   await satellite._performSnapshot()
 
   const local = await satellite._getEntries()
   const localTimestamp = new Date(local[0].timestamp).getTime()
 
   const incomingTs = localTimestamp + 1
-  const incomingEntry = generateOplogEntry(tableInfo, 'main', 'items', OPTYPES.insert, incomingTs, {
+  const incomingEntry = generateOplogEntry(tableInfo, 'main', 'parent', OPTYPES.insert, incomingTs, {
     id: 1,
     value: 'incoming',
   })
 
   const merged = satellite._mergeEntries(local, [incomingEntry])
-  const item = merged['main.items']['1']
+  const item = merged['main.parent']['1']
 
   t.deepEqual(item, {
     namespace: 'main',
-    tablename: 'items',
+    tablename: 'parent',
     primaryKeys: {id: 1},
     optype: OPTYPES.upsert,
     changes: {
@@ -270,14 +264,14 @@ test('take snapshot and merge incoming wins', async t => {
 })
 
 test('apply does not add anything to oplog', async t => {
-  const { adapter, runMigrations, satellite, tableInfo } = t.context
+  const { adapter, runMigrations, satellite, tableInfo } = t.context as any
   await runMigrations()
 
-  await adapter.run(`INSERT INTO items(id, value, otherValue) VALUES (1, 'local', null)`)
+  await adapter.run(`INSERT INTO parent(id, value, otherValue) VALUES (1, 'local', null)`)
   await satellite._performSnapshot()
 
   const incomingTs = new Date().getTime()
-  const incomingEntry = generateOplogEntry(tableInfo, 'main', 'items', OPTYPES.insert, incomingTs, {
+  const incomingEntry = generateOplogEntry(tableInfo, 'main', 'parent', OPTYPES.insert, incomingTs, {
     id: 1,
     value: 'incoming',
     otherValue: 1,
@@ -286,7 +280,7 @@ test('apply does not add anything to oplog', async t => {
   await satellite._apply([incomingEntry])
   await satellite._performSnapshot()
 
-  const [ row ] = await adapter.query('SELECT * from items WHERE id=1')
+  const [row] = await adapter.query('SELECT * from parent WHERE id=1')
   t.is(row.value, 'incoming')
   t.is(row.otherValue, 1)
 
@@ -295,15 +289,15 @@ test('apply does not add anything to oplog', async t => {
 })
 
 test('apply incoming DELETE', async t => {
-  const { adapter, runMigrations, satellite, tableInfo } = t.context
+  const { adapter, runMigrations, satellite, tableInfo } = t.context as any
   await runMigrations()
 
-  await adapter.run(`INSERT INTO items(id) VALUES (1)`)
-  let rows = await adapter.query('SELECT * from items WHERE id=1')
+  await adapter.run(`INSERT INTO parent(id) VALUES (1)`)
+  let rows = await adapter.query('SELECT * from parent WHERE id=1')
   t.is(rows.length, 1)
 
   const incomingTs = new Date().getTime()
-  const incomingEntry = generateOplogEntry(tableInfo, 'main', 'items', OPTYPES.delete, incomingTs, {
+  const incomingEntry = generateOplogEntry(tableInfo, 'main', 'parent', OPTYPES.delete, incomingTs, {
     id: 1,
     value: 'incoming',
     otherValue: 1,
@@ -311,16 +305,16 @@ test('apply incoming DELETE', async t => {
 
   await satellite._apply([incomingEntry])
 
-  rows = await adapter.query('SELECT * from items WHERE id=1')
+  rows = await adapter.query('SELECT * from parent WHERE id=1')
   t.is(rows.length, 0)
 })
 
 test('apply incoming with no local', async t => {
-  const { adapter, runMigrations, satellite, tableInfo } = t.context
+  const { adapter, runMigrations, satellite, tableInfo } = t.context as any
   await runMigrations()
 
   const incomingTs = new Date().getTime()
-  const incomingEntry = generateOplogEntry(tableInfo, 'main', 'items', OPTYPES.delete, incomingTs, {
+  const incomingEntry = generateOplogEntry(tableInfo, 'main', 'parent', OPTYPES.delete, incomingTs, {
     id: 1,
     value: 'incoming',
     otherValue: 1,
@@ -328,12 +322,12 @@ test('apply incoming with no local', async t => {
 
   await satellite._apply([incomingEntry])
 
-  const rows = await adapter.query('SELECT * from items WHERE id=1')
+  const rows = await adapter.query('SELECT * from parent WHERE id=1')
   t.is(rows.length, 0)
 })
 
 test('apply empty incoming', async t => {
-  const { runMigrations, satellite } = t.context
+  const { runMigrations, satellite } = t.context as any
   await runMigrations()
 
   await satellite._apply([])
@@ -342,23 +336,23 @@ test('apply empty incoming', async t => {
 })
 
 test('INSERT wins over DELETE and restored deleted values', async t => {
-  const { satellite, tableInfo } = t.context
+  const { satellite, tableInfo } = t.context as any
 
   const localTs = new Date().getTime()
   const incomingTs = localTs + 1
 
   const incoming = [
-    generateOplogEntry(tableInfo, 'main', 'items', OPTYPES.insert, incomingTs, {
+    generateOplogEntry(tableInfo, 'main', 'parent', OPTYPES.insert, incomingTs, {
       id: 1,
       otherValue: 1,
     }),
-    generateOplogEntry(tableInfo, 'main', 'items', OPTYPES.delete, incomingTs, {
+    generateOplogEntry(tableInfo, 'main', 'parent', OPTYPES.delete, incomingTs, {
       id: 1
     })
   ]
 
   const local = [
-    generateOplogEntry(tableInfo, 'main', 'items', OPTYPES.insert, localTs, {
+    generateOplogEntry(tableInfo, 'main', 'parent', OPTYPES.insert, localTs, {
       id: 1,
       value: 'local',
       otherValue: null,
@@ -366,11 +360,11 @@ test('INSERT wins over DELETE and restored deleted values', async t => {
   ]
 
   const merged = satellite._mergeEntries(local, incoming)
-  const item = merged['main.items']['1']
+  const item = merged['main.parent']['1']
 
   t.deepEqual(item, {
     namespace: 'main',
-    tablename: 'items',
+    tablename: 'parent',
     primaryKeys: {id: 1},
     optype: OPTYPES.upsert,
     changes: {
@@ -382,13 +376,13 @@ test('INSERT wins over DELETE and restored deleted values', async t => {
 })
 
 test('merge incoming with empty local', async t => {
-  const { satellite, tableInfo } = t.context
+  const { satellite, tableInfo } = t.context as any
 
   const localTs = new Date().getTime()
   const incomingTs = localTs + 1
 
   const incoming = [
-    generateOplogEntry(tableInfo, 'main', 'items', OPTYPES.insert, incomingTs, {
+    generateOplogEntry(tableInfo, 'main', 'parent', OPTYPES.insert, incomingTs, {
       id: 1
     })
   ]
@@ -396,11 +390,11 @@ test('merge incoming with empty local', async t => {
   const local = []
 
   const merged = satellite._mergeEntries(local, incoming)
-  const item = merged['main.items']['1']
+  const item = merged['main.parent']['1']
 
   t.deepEqual(item, {
     namespace: 'main',
-    tablename: 'items',
+    tablename: 'parent',
     primaryKeys: {id: 1},
     optype: OPTYPES.upsert,
     changes: {
@@ -410,7 +404,7 @@ test('merge incoming with empty local', async t => {
 })
 
 test('advance oplog cursor', async t => {
-  const { adapter, runMigrations, satellite } = t.context
+  const { adapter, runMigrations, satellite } = t.context as any
   await runMigrations()
 
   // fake current propagated rowId
@@ -420,8 +414,8 @@ test('advance oplog cursor', async t => {
   const oplogTablename = opts.oplogTable.tablename
   const metaTablename = opts.metaTable.tablename
 
-  // Insert a couple of items.
-  await adapter.run(`INSERT INTO main.items(id) VALUES ('1'),('2')`)
+  // Insert a couple of rows.
+  await adapter.run(`INSERT INTO main.parent(id) VALUES ('1'),('2')`)
 
   // We have two rows in the oplog.
   let rows = await adapter.query(`SELECT count(rowid) as num_rows FROM ${oplogTablename}`)
@@ -440,8 +434,8 @@ test('advance oplog cursor', async t => {
 })
 
 test('compensations: referential integrity is enforced', async t => {
-  const { adapter, runCompensations, satellite } = t.context
-  await runCompensations()
+  const { adapter, runMigrations, satellite } = t.context as any
+  await runMigrations()
 
   await adapter.run(`PRAGMA foreign_keys = ON`)
   await satellite._setMeta('compensations', 0)
@@ -454,8 +448,8 @@ test('compensations: referential integrity is enforced', async t => {
 })
 
 test('compensations: incoming operation breaks referential integrity', async t => {
-  const { adapter, runCompensations, satellite, tableInfo, timestamp } = t.context
-  await runCompensations()
+  const { adapter, runMigrations, satellite, tableInfo, timestamp } = t.context as any
+  await runMigrations()
 
   await adapter.run(`PRAGMA foreign_keys = ON`)
   await satellite._setMeta('compensations', 0)
@@ -473,8 +467,8 @@ test('compensations: incoming operation breaks referential integrity', async t =
 })
 
 test('compensations: incoming operations accepted if restore referential integrity', async t => {
-  const { adapter, runCompensations, satellite, tableInfo, timestamp } = t.context
-  await runCompensations()
+  const { adapter, runMigrations, satellite, tableInfo, timestamp } = t.context as any
+  await runMigrations()
 
   await adapter.run(`PRAGMA foreign_keys = ON`)
   await satellite._setMeta('compensations', 0)
@@ -504,8 +498,8 @@ test('compensations: incoming operations accepted if restore referential integri
 })
 
 test('compensations: using triggers with flag 0', async t => {
-  const { adapter, runCompensations, satellite, tableInfo } = t.context
-  await runCompensations()
+  const { adapter, runMigrations, satellite, tableInfo } = t.context as any
+  await runMigrations()
 
   await adapter.run(`PRAGMA foreign_keys = ON`)
   await satellite._setMeta('compensations', 0)
@@ -528,8 +522,8 @@ test('compensations: using triggers with flag 0', async t => {
 })
 
 test('compensations: using triggers with flag 1', async t => {
-  const { adapter, runCompensations, satellite, tableInfo } = t.context
-  await runCompensations()
+  const { adapter, runMigrations, satellite, tableInfo } = t.context as any
+  await runMigrations()
 
   await adapter.run(`PRAGMA foreign_keys = ON`)
   await satellite._setMeta('compensations', 1)

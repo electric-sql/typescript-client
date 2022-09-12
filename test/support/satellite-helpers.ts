@@ -11,13 +11,9 @@ interface TableSchema {
 
 export const initTableInfo = (): TableInfo => {
   return {
-    'main.items': {
-      primaryKey: ['id'],
-      columns: ['id', 'value', 'otherValue'],
-    },
     'main.parent': {
       primaryKey: ['id'],
-      columns: ['id', 'value'],
+      columns: ['id', 'value', 'otherValue'],
     },
     'main.child': {
       primaryKey: ['id'],

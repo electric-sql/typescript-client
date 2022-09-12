@@ -51,7 +51,7 @@ test('exec\'ing a dangerous statement calls potentiallyChanged', async t => {
 
   t.is(notifier.notifications.length, 0)
 
-  db.exec('insert into items')
+  db.exec('insert into parent')
 
   t.is(notifier.notifications.length, 1)
 })
@@ -113,9 +113,9 @@ test('electrify preserves chainability', async t => {
 
   t.is(notifier.notifications.length, 0)
 
-  db.exec('insert into items')
-    .exec('update items')
-    .exec('drop items')
+  db.exec('insert into parent')
+    .exec('update parent')
+    .exec('drop parent')
 
   t.is(notifier.notifications.length, 3)
 })
@@ -128,7 +128,7 @@ test('running a prepared statement outside of a transaction notifies', async t =
 
   t.is(notifier.notifications.length, 0)
 
-  const stmt = db.prepare('insert into items')
+  const stmt = db.prepare('insert into parent')
   stmt.run()
 
   t.is(notifier.notifications.length, 1)
@@ -142,7 +142,7 @@ test('running a prepared statement *inside* of a transaction does *not* notify',
 
   t.is(notifier.notifications.length, 0)
 
-  const stmt = db.prepare('insert into items')
+  const stmt = db.prepare('insert into parent')
   const runTx = db.transaction(() => {
     stmt.run()
   })
@@ -161,7 +161,7 @@ test('iterating a prepared statement works', async t => {
 
   t.is(notifier.notifications.length, 0)
 
-  const stmt = db.prepare('insert into items')
+  const stmt = db.prepare('insert into parent')
   const results = [...stmt.iterate()]
 
   t.is(notifier.notifications.length, 1)

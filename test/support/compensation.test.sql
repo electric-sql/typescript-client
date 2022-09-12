@@ -10,7 +10,8 @@ Initial migration for Satellite with compensations
 
 CREATE TABLE IF NOT EXISTS main.parent (
   id INTEGER PRIMARY KEY,
-  value TEXT
+  value TEXT,
+  otherValue INTEGER DEFAULT 0
 ) STRICT;
 
 CREATE TABLE IF NOT EXISTS main.child (
@@ -70,7 +71,7 @@ CREATE TRIGGER insert_main_parent_into_oplog
    WHEN 1 == (SELECT flag from trigger_settings WHERE tablename == 'main.parent')
 BEGIN
   INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-  VALUES ('main', 'parent', 'INSERT', json_object('id', new.id), json_object('id', new.id, 'value', new.value), NULL, NULL);
+  VALUES ('main', 'parent', 'INSERT', json_object('id', new.id), json_object('id', new.id, 'value', new.value, 'otherValue', new.otherValue), NULL, NULL);
 END;
 
 DROP TRIGGER IF EXISTS update_main_parent_into_oplog;
@@ -79,7 +80,7 @@ CREATE TRIGGER update_main_parent_into_oplog
    WHEN 1 == (SELECT flag from trigger_settings WHERE tablename == 'main.parent')
 BEGIN
   INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-  VALUES ('main', 'parent', 'UPDATE', json_object('id', new.id), json_object('id', new.id, 'value', new.value), json_object('id', old.id, 'value'), NULL);
+  VALUES ('main', 'parent', 'UPDATE', json_object('id', new.id), json_object('id', new.id, 'value', new.value, 'otherValue', new.otherValue), json_object('id', old.id, 'value', old.value, 'otherValue', old.otherValue), NULL);
 END;
 
 DROP TRIGGER IF EXISTS delete_main_parent_into_oplog;
@@ -88,7 +89,7 @@ CREATE TRIGGER delete_main_parent_into_oplog
    WHEN 1 == (SELECT flag from trigger_settings WHERE tablename == 'main.parent')
 BEGIN
   INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-  VALUES ('main', 'parent', 'DELETE', json_object('id', old.id), NULL, json_object('id', old.id, 'value', old.value), NULL);
+  VALUES ('main', 'parent', 'DELETE', json_object('id', old.id), NULL, json_object('id', old.id, 'value', old.value, 'otherValue', old.otherValue), NULL);
 END;
 
 DROP TRIGGER IF EXISTS insert_main_child_into_oplog;
@@ -125,7 +126,7 @@ CREATE TRIGGER compensation_insert_main_child_into_oplog
         1 == (SELECT value from _electric_meta WHERE key == 'compensations')
 BEGIN
   INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-  SELECT 'main', 'parent', 'UPDATE', json_object('id', id), json_object('id', id, 'value', value), NULL, NULL
+  SELECT 'main', 'parent', 'UPDATE', json_object('id', id), json_object('id', id, 'value', value, 'otherValue', otherValue), NULL, NULL
   FROM main.parent WHERE id = new.parent;
 END;
 
@@ -136,6 +137,6 @@ CREATE TRIGGER compensation_update_main_child_into_oplog
         1 == (SELECT value from _electric_meta WHERE key == 'compensations')
 BEGIN
   INSERT INTO _electric_oplog (namespace, tablename, optype, primaryKey, newRow, oldRow, timestamp)
-  SELECT 'main', 'parent', 'UPDATE', json_object('id', id), json_object('id', id, 'value', value), NULL, NULL
+  SELECT 'main', 'parent', 'UPDATE', json_object('id', id), json_object('id', id, 'value', value, 'otherValue', otherValue), NULL, NULL
   FROM main.parent WHERE id = new.parent;
 END;

@@ -68,6 +68,7 @@ message SatErrorResp {
         AUTH_REQUIRED = 1;
         AUTH_FAILED = 2;
         REPLICATION_FAILED = 3;
+        INVALID_REQUEST = 4;
     }
 
     ErrorCode error_type = 1;

@@ -94,6 +94,7 @@ export enum SatErrorResp_ErrorCode {
   AUTH_REQUIRED = 1,
   AUTH_FAILED = 2,
   REPLICATION_FAILED = 3,
+  INVALID_REQUEST = 4,
   UNRECOGNIZED = -1,
 }
 

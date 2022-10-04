@@ -39,7 +39,7 @@ export abstract class BaseRegistry implements Registry {
     const stoppingPromises = this.stoppingPromises
     const stopping = stoppingPromises[dbName]
     if (stopping !== undefined) {
-      return stopping.then(() => this.ensureStarted(dbName, adapter, migrator, notifier, socket))
+      return stopping.then(() => this.ensureStarted(dbName, adapter, migrator, notifier, socket, authState))
     }
 
     // If we're in the process of starting the satellite process for this
@@ -64,7 +64,7 @@ export abstract class BaseRegistry implements Registry {
     }
 
     // Otherwise we need to fire it up!
-    const startingPromise = this.startProcess(dbName, adapter, migrator, notifier, authState)
+    const startingPromise = this.startProcess(dbName, adapter, migrator, notifier, socket, authState)
       .then((satellite) => {
         delete startingPromises[dbName]
 

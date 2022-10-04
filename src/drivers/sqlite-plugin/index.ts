@@ -18,6 +18,7 @@ export interface SQLitePlugin {
   // May be promisified.
   readTransaction(txFn: AnyFunction, error?: AnyFunction, success?: AnyFunction): VoidOrPromise
   transaction(txFn: AnyFunction, error?: AnyFunction, success?: AnyFunction): VoidOrPromise
+  sqlBatch(stmts: string[], success?: AnyFunction, error?: AnyFunction): VoidOrPromise
 }
 
 // The relevant subset of the SQLitePluginTransaction interface.

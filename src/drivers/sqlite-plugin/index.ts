@@ -25,6 +25,11 @@ export interface SQLitePlugin {
 export interface SQLitePluginTransaction {
   readOnly: boolean
   success(...args: any[]): any
+
+  // Never promisified.
+  addStatement(sql: string, values?: BindParams, success?: AnyFunction, error?: AnyFunction): void
+
+  // May be promisified.
   executeSql(sql: string, values?: BindParams, success?: AnyFunction, error?: AnyFunction): VoidOrPromise
 }
 

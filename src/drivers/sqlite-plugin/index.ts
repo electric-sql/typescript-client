@@ -59,11 +59,18 @@ export abstract class ElectricSQLitePlugin implements ProxyWrapper {
 
   // Everything goes through `addTransaction`, so we patch
   // it to patch the `tx.success`` function.
+  //
+  // XXX this is where the proxy this bug manifests.
+  // I.e.: the comment above is incorrect.
   addTransaction(tx: SQLitePluginTransaction): void {
+    console.log('ElectricSQLitePlugin.addTransaction')
+
     const originalSuccessFn = tx.success.bind(tx)
     const potentiallyChanged = this.electric.potentiallyChanged.bind(this.electric)
 
     tx.success = (...args: any[]): any => {
+      console.log('ElectricSQLitePlugin.addTransaction tx.success', args)
+
       if (!tx.readOnly) {
         potentiallyChanged()
       }

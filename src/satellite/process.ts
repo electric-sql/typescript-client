@@ -124,9 +124,9 @@ export class SatelliteProcess implements Satellite {
     this._lastAckdRowId - Number(lastAckdRowId)
     this.client.setOutboundLogPositions(lastSentRowId, lastAckdRowId)
 
-    return this.client.connect()
-      .then(() => this.client.authenticate())
-      .then(() => this.client.startReplication(this._lsn)) 
+    // return this.client.connect()
+    //   .then(() => this.client.authenticate())
+    //   .then(() => this.client.startReplication(this._lsn))
   }
 
   // Unsubscribe from data changes and stop polling

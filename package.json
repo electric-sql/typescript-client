@@ -36,7 +36,7 @@
   "bugs": {
     "url": "https://github.com/electric-sql/typescript-client/issues"
   },
-  "main": "index.js",
+  "main": "dist/index.js",
   "type": "module",
   "platform": "node",
   "types": "dist/index.d.ts",
@@ -53,6 +53,28 @@
     "./react-native": "./dist/drivers/react-native-sqlite-storage/index.js",
     ".": "./dist/index.js",
     "./*": "./dist/*/index.js"
+  },
+  "typesVersions": {
+    "*": {
+      "browser": [
+        "./dist/drivers/absurd-sql/index.d.ts"
+      ],
+      "cordova": [
+        "./dist/drivers/cordova-sqlite-storage/index.d.ts"
+      ],
+      "expo": [
+        "./dist/drivers/expo-sqlite/index.d.ts"
+      ],
+      "node": [
+        "./dist/drivers/better-sqlite3/index.d.ts"
+      ],
+      "react": [
+        "./dist/frameworks/react/index.d.ts"
+      ],
+      "react-native": [
+        "./dist/drivers/react-native-sqlite-storage/index.d.ts"
+      ]
+    }
   },
   "scripts": {
     "dev": "tsmodule dev",

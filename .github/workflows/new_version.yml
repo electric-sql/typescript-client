@@ -1,0 +1,21 @@
+name: Release new version
+on:
+  workflow_dispatch:
+    inputs:
+      version_increment:
+        description: "Select increment (next version)"
+        required: true
+        default: patch
+        type: choice
+        options:
+          - "patch"
+          - "minor"
+          - "major"
+          - "prepatch"
+          - "preminor"
+          - "premajor"
+
+jobs:
+  test:
+    uses: ./.github/workflows/tests.yml
+  

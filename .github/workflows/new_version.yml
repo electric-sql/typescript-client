@@ -1,4 +1,5 @@
 name: Release new version
+run-name: Next ${{ inputs.version_increment }} version publish by @${{ github.actor }
 on:
   workflow_dispatch:
     inputs:
@@ -18,4 +19,19 @@ on:
 jobs:
   test:
     uses: ./.github/workflows/tests.yml
-  
+  release:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+      - run: make deps
+      - name: Release
+        run: |
+          npx release-it --increment=${{ inputs.version_increment }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

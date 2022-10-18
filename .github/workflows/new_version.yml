@@ -29,6 +29,10 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: 16
+      - name: git config
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
       - run: make deps
       - name: Release
         run: |

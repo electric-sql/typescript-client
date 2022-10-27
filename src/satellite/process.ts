@@ -6,13 +6,14 @@ import { Migrator } from '../migrators/index'
 import { AuthStateNotification, Change, Notifier } from '../notifiers/index'
 import { Client } from './index'
 import { QualifiedTablename } from '../util/tablename'
-import { AckType, DbName, LSN, Relation, RelationsCache, SatelliteError, SqlValue, Statement, Transaction } from '../util/types'
+import { AckType, DbName, LSN, Relation, RelationsCache, Row, SatelliteError, SqlValue, Statement, Transaction } from '../util/types'
 import { Satellite } from './index'
 import { SatelliteOpts } from './config'
 import { mergeChangesLastWriteWins, mergeOpTypesAddWins } from './merge'
 import { OPTYPES, OplogEntry, OplogTableChanges, operationsToTableChanges, fromTransaction, toTransactions } from './oplog'
 import { SatRelation_RelationType } from '../_generated/proto/satellite'
 import { base64, DEFAULT_LSN, bytesToNumber, numberToBytes } from '../util/common'
+import { v4 as uuidv4 } from 'uuid';
 
 type ChangeAccumulator = {
   [key: string]: Change
@@ -27,6 +28,7 @@ export class SatelliteProcess implements Satellite {
 
   opts: SatelliteOpts
 
+  _clientId?: string
   _authState?: AuthState
   _authStateSubscription?: string
 
@@ -117,6 +119,9 @@ export class SatelliteProcess implements Satellite {
       await this._ack(decoded, type == AckType.REMOTE_COMMIT)
     })
 
+    const clientId = await this._getClientId()
+
+    this._clientId = clientId
     this._lastAckdRowId = Number(await this._getMeta('lastAckdRowId'))
     this._lastSentRowId = Number(await this._getMeta('lastSentRowId'))
 
@@ -129,7 +134,7 @@ export class SatelliteProcess implements Satellite {
     this._lsn = base64.toBytes(lsnBase64)
 
     return this.client.connect()
-      .then(() => this.client.authenticate())
+      .then(() => this.client.authenticate(clientId))
       .then(() => this.client.startReplication(this._lsn))
       .catch((error) => console.log(`couldn't start replication: ${error}`))
   }
@@ -418,12 +423,38 @@ export class SatelliteProcess implements Satellite {
   }
 
   async _getMeta(key: string): Promise<string> {
+    const rows = await this._getMetaValue(key)
+    return rows[0]!.value as any
+  }
+
+  private async _getMetaValue(key: string): Promise<Row[]> {
     const meta = this.opts.metaTable.toString()
 
     const sql = `SELECT value from ${meta} WHERE key = ?`
     const args = [key]
-    const rows = await this.adapter.query({ sql, args })
-    return rows[0]!.value as any
+    return this.adapter.query({ sql, args })
+  }
+
+  private async _getClientId(): Promise<string> {
+    let clientIdKey = "clientId"
+
+    const rows = await this._getMetaValue(clientIdKey)
+
+    if (rows.length !== 1) {
+      throw `Invalid metadata table, missing ${clientIdKey}`
+    }
+
+    let clientId: string = rows[0].value as string
+
+    if (clientId === '') {
+      clientId = uuidv4() as string
+      await this._setMeta(clientIdKey, clientId)
+    }
+    return clientId
+  }
+
+  clientId(): string | undefined {
+    return this._clientId
   }
 
   // Fetch primary keys from local store and use them to identify incoming ops.

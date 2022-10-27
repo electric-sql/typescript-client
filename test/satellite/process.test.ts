@@ -100,7 +100,27 @@ test('load metadata', async t => {
 
   const meta = await loadSatelliteMetaTable(adapter)
   // not sure why we need the buffer here, but might be a problem
-  t.deepEqual(meta, { compensations: 0, lastAckdRowId: '0', lastSentRowId: '0', lsn: base64.fromBytes(DEFAULT_LSN) })
+  t.deepEqual(meta, {
+    compensations: 0,
+    lastAckdRowId: '0',
+    lastSentRowId: '0',
+    lsn: base64.fromBytes(DEFAULT_LSN),
+    clientId: ''
+  })
+})
+
+test('set persistent client id', async t => {
+  const { satellite } = t.context as any
+
+  await satellite.start()
+  const clientId1 = satellite.clientId()
+  await satellite.stop()
+
+  await satellite.start()
+
+  const clientId2 = satellite.clientId()
+
+  t.assert(clientId1 === clientId2)
 })
 
 test('cannot UPDATE primary key', async t => {

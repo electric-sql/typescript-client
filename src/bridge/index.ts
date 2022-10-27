@@ -3,6 +3,7 @@ import { ElectrifyOptions } from '../electric/index'
 import { ChangeCallback, ChangeNotification } from '../notifiers/index'
 import { randomValue } from '../util/random'
 import { AnyFunction, DbName, StatementId } from '../util/types'
+import { ElectricConfig } from '../satellite/config'
 
 declare global {
   interface Worker {
@@ -176,14 +177,16 @@ export abstract class WorkerServer {
   SQL?: any
 
   worker: Worker
-  opts: ElectrifyOptions
+  config: ElectricConfig
+  opts?: ElectrifyOptions
 
   _dbs: {
     [key: DbName]: AnyWorkerThreadElectricDatabase
   }
 
-  constructor(worker: Worker, opts: ElectrifyOptions) {
+  constructor(worker: Worker, config: ElectricConfig, opts?: ElectrifyOptions) {
     this.worker = worker
+    this.config = config
     this.opts = opts
     this._dbs = {}
 
@@ -284,7 +287,7 @@ export abstract class WorkerServer {
     }
   }
 
-  static start(_worker: Worker, _opts: any = {}): void {
+  static start(_worker: Worker, _config: ElectricConfig, _opts: any = {}): void {
     throw new Error('Sub-classes must implement `WorkerServer.start`')
   }
 }

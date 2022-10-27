@@ -7,6 +7,7 @@ import { ElectricNamespace, ElectrifyOptions } from '../../electric/index'
 import { BundleMigrator } from '../../migrators/bundle'
 import { WorkerBridgeNotifier } from '../../notifiers/bridge'
 import { globalRegistry } from '../../satellite/registry'
+import { ElectricConfig } from '../../satellite/config'
 import { DbName } from '../../util/types'
 
 import { DatabaseAdapter } from './adapter'
@@ -42,7 +43,8 @@ export class ElectricWorker extends WorkerServer {
     }
 
     const opts = this.opts
-    const registry = opts.registry || globalRegistry
+    const config = this.config
+    const registry = opts?.registry || globalRegistry
 
     if (!(dbName in this._dbs)) {
       const SQL = this.SQL
@@ -57,15 +59,15 @@ export class ElectricWorker extends WorkerServer {
       const db = new SQL.Database(path, {filename: true})
       db.exec(`PRAGMA journal_mode=MEMORY; PRAGMA page_size=8192;`)
 
-      const adapter = opts.adapter || new DatabaseAdapter(db)
-      const migrator = opts.migrator || new BundleMigrator(adapter, opts.migrations)
-      const notifier = opts.notifier || new WorkerBridgeNotifier(dbName, this)
-      const socket = opts.socket || new WebSocketWeb()
+      const adapter = opts?.adapter || new DatabaseAdapter(db)
+      const migrator = opts?.migrator || new BundleMigrator(adapter, config.migrations)
+      const notifier = opts?.notifier || new WorkerBridgeNotifier(dbName, this)
+      const socket = opts?.socket || new WebSocketWeb()
 
       const namespace = new ElectricNamespace(adapter, notifier)
       this._dbs[dbName] = new ElectricDatabase(db, namespace, this.worker.user_defined_functions)
 
-      await registry.ensureStarted(dbName, adapter, migrator, notifier, socket, this.opts)
+      await registry.ensureStarted(dbName, adapter, migrator, notifier, socket, config)
     }
     else {
       await registry.ensureAlreadyStarted(dbName)
@@ -76,8 +78,8 @@ export class ElectricWorker extends WorkerServer {
 
   // Static entrypoint allows us to maintain a reference to the
   // instance. Passing opts allows the user to configure.
-  static start(worker: Worker, opts: ElectrifyOptions): void {
-    const ref = new ElectricWorker(worker, opts)
+  static start(worker: Worker, config: ElectricConfig, opts?: ElectrifyOptions): void {
+    const ref = new ElectricWorker(worker, config, opts)
 
     refs.push(ref)
   }

@@ -47,7 +47,7 @@ SQLite.enablePromise(true)
 
 // Open a database connection and electrify it.
 SQLite.openDatabase('example.db')
-  .then(db => electrify(db))
+  .then(db => electrify(db, { app: "my-app", env: "prod", migrations: [] }))
   .then(db => { // Use as normal, e.g.:
     db.transaction(tx => tx.executeSql('SELECT 1'))
   })
@@ -63,7 +63,7 @@ First create a `worker.js` file that imports and starts an ElectricWorker proces
 // worker.js
 import { ElectricWorker } from 'electric-sql/browser'
 
-ElectricWorker.start(self)
+ElectricWorker.start(self, { app: "my-app", env: "prod", migrations: [] })
 ```
 
 Then, in your main application:
@@ -112,7 +112,7 @@ export default const App = () => {
 
   useEffect(() => {
     SQLite.openDatabase('example.db')
-      .then(db => electrify(db))
+      .then(db => electrify(db, { app: "my-app", env: "prod" }))
       .then(db => setDb(db))
   }, [])
 

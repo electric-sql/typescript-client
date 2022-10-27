@@ -118,19 +118,19 @@ export class MockElectricWorker extends WorkerServer {
     }
 
     const opts = this.opts
-    const registry = opts.registry || new MockRegistry()
+    const registry = opts?.registry || new MockRegistry()
 
     if (!(dbName in this._dbs)) {
       const db = new MockDatabase(dbName)
-      const adapter = opts.adapter || new DatabaseAdapter(db)
-      const migrator = opts.migrator || new MockMigrator()
-      const notifier = opts.notifier || new MockNotifier(dbName)
-      const socket = opts.socket || new MockSocket()
+      const adapter = opts?.adapter || new DatabaseAdapter(db)
+      const migrator = opts?.migrator || new MockMigrator()
+      const notifier = opts?.notifier || new MockNotifier(dbName)
+      const socket = opts?.socket || new MockSocket()
 
       const namespace = new ElectricNamespace(adapter, notifier)
       this._dbs[dbName] = new ElectricDatabase(db, namespace, this.worker.user_defined_functions)
 
-      await registry.ensureStarted(dbName, adapter, migrator, notifier, socket, opts)
+      await registry.ensureStarted(dbName, adapter, migrator, notifier, socket, this.config)
     }
     else {
       await registry.ensureAlreadyStarted(dbName)

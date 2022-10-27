@@ -1,4 +1,4 @@
-import { rm as removeFile } from 'node:fs/promises'
+import { mkdir, rm as removeFile } from 'node:fs/promises'
 
 import test from 'ava'
 
@@ -39,8 +39,9 @@ const opts = Object.assign({}, satelliteDefaults, {
   pollingInterval: 200
 })
 
-test.beforeEach(t => {
-  const dbName = `test-${randomValue()}.db`
+test.beforeEach(async t => {
+  await mkdir(".tmp", {recursive: true})
+  const dbName = `.tmp/test-${randomValue()}.db`
   const db = new Database(dbName)
   const adapter = new DatabaseAdapter(db)
   const migrator = new BundleMigrator(adapter, migrations)

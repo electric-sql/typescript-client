@@ -47,7 +47,6 @@ export const initElectricSqlJs = async (worker: Worker, locateOpts: LocateFileOp
   }
   await workerClient.request(init, locator.serialise())
 
-  // we remove opts type info here to implement target interface
   const openDatabase = async (dbName: DbName, opts?: ElectrifyOptions): Promise<ElectrifiedDatabase> => {
     const open: ServerMethod = {
       target: 'server',
@@ -56,8 +55,8 @@ export const initElectricSqlJs = async (worker: Worker, locateOpts: LocateFileOp
     await workerClient.request(open, dbName)
 
     const db = new MainThreadDatabaseProxy(dbName, workerClient)
-    const adapter = opts && opts.adapter || new DatabaseAdapter(db)
-    const notifier = opts && opts.notifier || new MainThreadBridgeNotifier(dbName, workerClient)
+    const adapter = opts?.adapter || new DatabaseAdapter(db)
+    const notifier = opts?.notifier || new MainThreadBridgeNotifier(dbName, workerClient)
     const namespace = new ElectricNamespace(adapter, notifier)
 
     return proxyOriginal(db, {electric: namespace}) as ElectrifiedDatabase

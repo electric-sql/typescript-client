@@ -37,13 +37,12 @@ export class ElectricWorker extends WorkerServer {
     return true
   }
 
-  async open(dbName: DbName): Promise<boolean> {
+  async open(dbName: DbName, config: ElectricConfig): Promise<boolean> {
     if (this.SQL === undefined) {
       throw new RequestError(400, 'Must init before opening')
     }
 
     const opts = this.opts
-    const config = this.config
     const registry = opts?.registry || globalRegistry
 
     if (!(dbName in this._dbs)) {
@@ -78,8 +77,8 @@ export class ElectricWorker extends WorkerServer {
 
   // Static entrypoint allows us to maintain a reference to the
   // instance. Passing opts allows the user to configure.
-  static start(worker: Worker, config: ElectricConfig, opts?: ElectrifyOptions): void {
-    const ref = new ElectricWorker(worker, config, opts)
+  static start(worker: Worker, opts?: ElectrifyOptions): void {
+    const ref = new ElectricWorker(worker, opts)
 
     refs.push(ref)
   }

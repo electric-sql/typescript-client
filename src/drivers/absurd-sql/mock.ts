@@ -10,6 +10,7 @@ import { MockRegistry } from '../../satellite/mock'
 import { DatabaseAdapter } from './adapter'
 import { Config, Database, ElectricDatabase, QueryExecResult, Statement } from './database'
 import { MockSocket } from '../../sockets/mock'
+import { ElectricConfig } from '../../satellite/config'
 
 interface TestData {
   notifications: Notification[]
@@ -112,7 +113,7 @@ export class MockElectricWorker extends WorkerServer {
     return true
   }
 
-  async open(dbName: DbName): Promise<boolean> {
+  async open(dbName: DbName, config: ElectricConfig): Promise<boolean> {
     if (!this.SQL) {
       throw new RequestError(400, 'Must init before opening')
     }
@@ -130,7 +131,7 @@ export class MockElectricWorker extends WorkerServer {
       const namespace = new ElectricNamespace(adapter, notifier)
       this._dbs[dbName] = new ElectricDatabase(db, namespace, this.worker.user_defined_functions)
 
-      await registry.ensureStarted(dbName, adapter, migrator, notifier, socket, this.config)
+      await registry.ensureStarted(dbName, adapter, migrator, notifier, socket, config)
     }
     else {
       await registry.ensureAlreadyStarted(dbName)

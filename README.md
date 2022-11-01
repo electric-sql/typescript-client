@@ -63,7 +63,7 @@ First create a `worker.js` file that imports and starts an ElectricWorker proces
 // worker.js
 import { ElectricWorker } from 'electric-sql/browser'
 
-ElectricWorker.start(self, { app: "my-app", env: "prod", migrations: [] })
+ElectricWorker.start(self)
 ```
 
 Then, in your main application:
@@ -78,7 +78,7 @@ const worker = new Worker(url, {type: "module"})
 // Electrify the SQL.js / absurd-sql machinery and then open
 // a persistent, named database.
 initElectricSqlJs(worker, {locateFile: file => `/${file}`})
-  .then(SQL => SQL.openDatabase('example.db'))
+  .then(SQL => SQL.openDatabase('example.db', { app: "my-app", env: "prod", token: "token", migrations: [] }))
   .then(db => db.exec('SELECT 1'))
 ```
 

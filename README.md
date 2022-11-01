@@ -47,7 +47,7 @@ SQLite.enablePromise(true)
 
 // Open a database connection and electrify it.
 SQLite.openDatabase('example.db')
-  .then(db => electrify(db, { app: "my-app", env: "prod", migrations: [] }))
+  .then(db => electrify(db, { app: "my-app", env: "prod", token: "token", migrations: [] }))
   .then(db => { // Use as normal, e.g.:
     db.transaction(tx => tx.executeSql('SELECT 1'))
   })
@@ -112,7 +112,7 @@ export default const App = () => {
 
   useEffect(() => {
     SQLite.openDatabase('example.db')
-      .then(db => electrify(db, { app: "my-app", env: "prod" }))
+      .then(db => electrify(db, { app: "my-app", env: "prod", token: "token" }))
       .then(db => setDb(db))
   }, [])
 

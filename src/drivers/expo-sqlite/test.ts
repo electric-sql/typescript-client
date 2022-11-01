@@ -16,7 +16,7 @@ import { MockDatabase, MockWebSQLDatabase } from './mock'
 import { MockSocket } from '../../sockets/mock'
 
 type RetVal = Promise<[Database, Notifier, ElectrifiedDatabase]>
-const testConfig = {app: "app", env: "test", replication: {address: "", port: 0}}
+const testConfig = {app: "app", env: "test", token: "token", replication: {address: "", port: 0}}
 
 export const initTestable = async (dbName: DbName, useWebSQLDatabase: boolean = false, config: ElectricConfig = testConfig, opts?: ElectrifyOptions): RetVal => {
   const db = useWebSQLDatabase

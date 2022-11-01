@@ -172,9 +172,9 @@ export class GlobalRegistry extends BaseRegistry {
       ...satelliteClientDefaults,
       app: config.app,
       env: config.env,
+      token: config.token,
       address: config.replication?.address || defaultAddress,
       port: config.replication?.port || defaultPort,
-      token: "TODO"
     }
 
     const client = new SatelliteClient(socket, satelliteClientOpts)

@@ -63,6 +63,7 @@ export interface SatelliteClientOverrides {
 export interface ElectricConfig {
   app: string
   env: string
+  token: string
   migrations?: Migration[],
   replication?: {
     address: string

@@ -24,6 +24,7 @@ import { AckCallback, AuthResponse, ChangeType, LSN, RelationColumn, Replication
 import { DEFAULT_LSN, typeEncoder, typeDecoder } from '../util/common'
 import { Client } from '.';
 import { SatelliteClientOverrides, SatelliteClientOpts, satelliteClientDefaults } from './config';
+import { backOff, IBackOffOptions } from 'exponential-backoff';
 
 type IncomingHandler = { handle: (msg: any) => any | void, isRpc: boolean }
 
@@ -52,6 +53,15 @@ export class SatelliteClient extends EventEmitter implements Client {
     "Electric.Satellite.SatErrorResp": { handle: (error: SatErrorResp) => this.handleError(error), isRpc: false },
   }
 
+  connectionRetryPolicy: Partial<IBackOffOptions> = {
+    delayFirstAttempt: false,
+    startingDelay: 100,
+    jitter: 'none',
+    maxDelay: 3000,
+    numOfAttempts: 10,
+    timeMultiple: 2
+  }
+
   constructor(socket: Socket, opts: SatelliteClientOverrides) {
     super();
 
@@ -73,19 +83,29 @@ export class SatelliteClient extends EventEmitter implements Client {
     }
   }
 
-  // TODO: handle connection errors
-  connect(): Promise<void | SatelliteError> {
-    return new Promise((resolve, reject) => {
+  connect(retryHandler?: (error: any, attempt: number) => boolean): Promise<void | SatelliteError> {
+    const connectPromise = new Promise<void>((resolve, reject) => {
       this.socket.onceConnect(() => {
-        this.socketHandler = message => this.handleIncoming(message);
-        this.socket.onMessage(this.socketHandler);
-        resolve();
+        this.socketHandler = message => this.handleIncoming(message)
+        this.socket.onMessage(this.socketHandler)
+        resolve()
       })
-      this.socket.onceError(error => reject(error))
+
+      this.socket.onceError(error => {
+        reject(error)
+      })
 
       const { address, port } = this.opts;
-      this.socket.open({ url: `ws://${address}:${port}/ws` });
-    });
+      this.socket.open({ url: `ws://${address}:${port}/ws` })
+
+    })
+
+    const retryPolicy = { ...this.connectionRetryPolicy }
+    if (retryHandler) {
+      retryPolicy.retry = retryHandler
+    }
+
+    return backOff(() => connectPromise, retryPolicy);
   }
 
   close(): Promise<void> {

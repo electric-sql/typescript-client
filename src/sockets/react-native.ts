@@ -14,6 +14,10 @@ export class WebSocketReactNative implements Socket {
   }
 
   open(opts: ConnectionOptions): Socket {
+    this.connectCallbacks = [];
+    this.errorCallbacks = [];
+    this.messageCallbacks = [];
+
     this.socket = new WebSocket(opts.url);
     this.socket.binaryType = 'arraybuffer';
 

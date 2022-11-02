@@ -31,7 +31,7 @@ export interface Satellite {
 }
 
 export interface Client {
-  connect(): Promise<void | SatelliteError>;
+  connect(retryHandler?: (error: any, attempt: number) => boolean): Promise<void | SatelliteError>;
   close(): Promise<void | SatelliteError>;
   authenticate(): Promise<AuthResponse | SatelliteError>;
   startReplication(lsn: LSN): Promise<void | SatelliteError>;

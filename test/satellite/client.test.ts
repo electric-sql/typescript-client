@@ -67,6 +67,43 @@ test.serial('connect success', async t => {
   t.pass();
 });
 
+test.serial('connection backoff success', async t => {
+  const { client, server } = t.context as Context;
+
+  server.close()
+
+  const retry = (_e: any, a: number) => {
+    if (a > 0) {
+      t.pass()
+      return false
+    }
+    return true
+  }
+
+  try {
+    await client.connect(retry)
+  } catch (e) { }
+});
+
+test.serial('connection backoff failure', async t => {
+  const { client, server } = t.context as Context;
+
+  server.close()
+
+  const retry = (_e: any, a: number) => {
+    if (a > 0) {
+      return false
+    }
+    return true
+  }
+
+  try {
+    await client.connect(retry)
+  } catch (e) {
+    t.pass()
+  }
+});
+
 // TODO: handle connection errors scenarios
 
 async function connectAndAuth({ client, server, clientId }) {

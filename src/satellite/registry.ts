@@ -7,7 +7,7 @@ import { DbName } from '../util/types'
 import { Satellite, Registry } from './index'
 import { satelliteDefaults, ElectricConfig, satelliteClientDefaults, validateConfig } from './config'
 import { SatelliteProcess } from './process'
-import { Socket } from '../sockets'
+import { SocketFactory } from '../sockets'
 import { SatelliteClient } from './client'
 import { ElectrifyOptions } from '../electric'
 
@@ -34,20 +34,20 @@ export abstract class BaseRegistry implements Registry {
     _adapter: DatabaseAdapter,
     _migrator: Migrator,
     _notifier: Notifier,
-    _socket: Socket,
+    _socketFactory: SocketFactory,
     _config: ElectricConfig,
     _authState?: AuthState,): Promise<Satellite> {
     throw `Subclasses must implement startProcess`
   }
 
-  async ensureStarted(dbName: DbName, adapter: DatabaseAdapter, migrator: Migrator, notifier: Notifier, socket: Socket, opts: ElectrifyOptions, authState?: AuthState): Promise<Satellite> {
+  async ensureStarted(dbName: DbName, adapter: DatabaseAdapter, migrator: Migrator, notifier: Notifier, socketFactory: SocketFactory, opts: ElectrifyOptions, authState?: AuthState): Promise<Satellite> {
     // If we're in the process of stopping the satellite process for this
     // dbName, then we wait for the process to be stopped and then we
     // call this function again to retry starting it.
     const stoppingPromises = this.stoppingPromises
     const stopping = stoppingPromises[dbName]
     if (stopping !== undefined) {
-      return stopping.then(() => this.ensureStarted(dbName, adapter, migrator, notifier, socket, opts, authState))
+      return stopping.then(() => this.ensureStarted(dbName, adapter, migrator, notifier, socketFactory, opts, authState))
     }
 
     // If we're in the process of starting the satellite process for this
@@ -72,7 +72,7 @@ export abstract class BaseRegistry implements Registry {
     }
 
     // Otherwise we need to fire it up!
-    const startingPromise = this.startProcess(dbName, adapter, migrator, notifier, socket, opts.config, authState)
+    const startingPromise = this.startProcess(dbName, adapter, migrator, notifier, socketFactory, opts.config, authState)
       .then((satellite) => {
         delete startingPromises[dbName]
 
@@ -155,7 +155,7 @@ export class GlobalRegistry extends BaseRegistry {
     adapter: DatabaseAdapter,
     migrator: Migrator,
     notifier: Notifier,
-    socket: Socket,
+    socketFactory: SocketFactory,
     config: ElectricConfig,
     authState?: AuthState,
   ): Promise<Satellite> {
@@ -173,7 +173,7 @@ export class GlobalRegistry extends BaseRegistry {
       token: "TODO"
     }
 
-    const client = new SatelliteClient(socket, satelliteClientOpts)
+    const client = new SatelliteClient(socketFactory, satelliteClientOpts)
     const satellite = new SatelliteProcess(dbName, adapter, migrator, notifier, client, satelliteDefaults)
     await satellite.start(authState)
 

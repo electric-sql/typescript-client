@@ -4,7 +4,7 @@ import { AuthState } from '../auth/index'
 import { DatabaseAdapter } from '../electric/adapter'
 import { Migrator } from '../migrators/index'
 import { AuthStateNotification, Change, Notifier } from '../notifiers/index'
-import { Client } from './index'
+import { Client, ConnectivityStatus } from './index'
 import { QualifiedTablename } from '../util/tablename'
 import { AckType, DbName, LSN, Relation, RelationsCache, SatelliteError, SqlValue, Statement, Transaction } from '../util/types'
 import { Satellite } from './index'
@@ -117,10 +117,12 @@ export class SatelliteProcess implements Satellite {
       await this._ack(decoded, type == AckType.REMOTE_COMMIT)
     })
 
+    this.client.subscribeToOutboundEvent('started', () => this._throttledSnapshot())
+
     this._lastAckdRowId = Number(await this._getMeta('lastAckdRowId'))
     this._lastSentRowId = Number(await this._getMeta('lastSentRowId'))
 
-    this.client.setOutboundLogPositions(
+    this.client.resetOutboundLogPositions(
       numberToBytes(this._lastAckdRowId),
       numberToBytes(this._lastSentRowId),
     )
@@ -128,10 +130,7 @@ export class SatelliteProcess implements Satellite {
     const lsnBase64 = await this._getMeta('lsn')
     this._lsn = base64.toBytes(lsnBase64)
 
-    return this.client.connect()
-      .then(() => this.client.authenticate())
-      .then(() => this.client.startReplication(this._lsn))
-      .catch((error) => console.log(`couldn't start replication: ${error}`))
+    return this._connectAndStartReplication();
   }
 
   // Unsubscribe from data changes and stop polling
@@ -147,6 +146,28 @@ export class SatelliteProcess implements Satellite {
     }
 
     await this.client.close();
+  }
+
+  connectivityStatusChange(status: ConnectivityStatus): Promise<void | SatelliteError> {
+    switch (status) {
+      case "connected": {
+        return this._connectAndStartReplication()
+      }
+      case "disconnected": {
+        this.client.close()
+        return Promise.resolve()
+      }
+      default: {
+        throw new Error(`unexpected connectivity state: ${status}`)
+      }
+    }
+  }
+
+  async _connectAndStartReplication(): Promise<void | SatelliteError> {
+    return this.client.connect()
+      .then(() => this.client.authenticate())
+      .then(() => this.client.startReplication(this._lsn))
+      .catch((error) => console.log(`couldn't start replication: ${error}`))
   }
 
   async _verifyTableStructure(): Promise<boolean> {
@@ -200,14 +221,24 @@ export class SatelliteProcess implements Satellite {
     const rows = await this.adapter.query({ sql: selectChanges, args: [timestamp] })
     const results = rows as unknown as OplogEntry[]
 
-    if (results.length === 0) {
-      return
+    const promises: Promise<void | SatelliteError>[] = []
+
+    if (results.length !== 0) {
+      promises.push(this._notifyChanges(results))
     }
 
-    await Promise.all([
-      this._notifyChanges(results),
-      this._replicateSnapshotChanges(results)
-    ])
+    if (!this.client.isClosed()) {
+      const { enqueued } = this.client.getOutboundLogPositions()
+      const enqueuedLogPos = bytesToNumber(enqueued)
+
+      // TODO: take next N transactions instead of all
+      const promise =
+        this._getEntries(enqueuedLogPos)
+          .then((missing) => this._replicateSnapshotChanges(missing))
+      promises.push(promise)
+    }
+
+    await Promise.all(promises)
   }
   async _notifyChanges(results: OplogEntry[]): Promise<void> {
     const acc: ChangeAccumulator = {}
@@ -241,6 +272,10 @@ export class SatelliteProcess implements Satellite {
     this.notifier.actuallyChanged(this.dbName, changes)
   }
   async _replicateSnapshotChanges(results: OplogEntry[]): Promise<void | SatelliteError> {
+    if (this.client.isClosed()) {
+      return;
+    }
+
     const transactions = toTransactions(results, this.relations)
     for (const txn of transactions) {
       return this.client.enqueueTransaction(txn);

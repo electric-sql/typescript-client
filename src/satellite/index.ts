@@ -4,7 +4,7 @@ import { DatabaseAdapter } from '../electric/adapter'
 import { Migrator } from '../migrators/index'
 import { Notifier } from '../notifiers/index'
 import { Socket } from '../sockets'
-import { AckCallback, AuthResponse, DbName, LSN, SatelliteError, Transaction } from '../util/types'
+import { AckCallback, AuthResponse, ConnectivityStatus, DbName, LSN, SatelliteError, Transaction } from '../util/types'
 
 export { SatelliteProcess } from './process'
 export { GlobalRegistry, globalRegistry } from './registry'
@@ -28,11 +28,14 @@ export interface Satellite {
 
   start(authState?: AuthState): Promise<void | Error>
   stop(): Promise<void>
+  connectivityStatusChange(status: ConnectivityStatus): Promise<void | SatelliteError>
 }
+
 
 export interface Client {
   connect(retryHandler?: (error: any, attempt: number) => boolean): Promise<void | SatelliteError>;
   close(): Promise<void | SatelliteError>;
+  isClosed(): boolean;
   authenticate(): Promise<AuthResponse | SatelliteError>;
   startReplication(lsn: LSN): Promise<void | SatelliteError>;
   stopReplication(): Promise<void | SatelliteError>;
@@ -40,5 +43,8 @@ export interface Client {
   enqueueTransaction(transaction: Transaction): void | SatelliteError
   subscribeToAck(callback: AckCallback): void;
   unsubscribeToAck(callback: AckCallback): void;
-  setOutboundLogPositions(sent: LSN, ack: LSN): void;
+  resetOutboundLogPositions(sent: LSN, ack: LSN): void;
+  getOutboundLogPositions(): { enqueued: LSN, ack: LSN };
+  subscribeToOutboundEvent(event: 'started', callback: () => void): void;
+  unsubscribeToOutboundEvent(event: 'started', callback: () => void): void;
 }

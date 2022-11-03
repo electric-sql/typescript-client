@@ -70,13 +70,13 @@ export class SatelliteClient extends EventEmitter implements Client {
     this.outbound = this.resetReplication();
   }    
 
-  private resetReplication(current?: Replication): Replication {
+  private resetReplication(enqueued?: LSN, ack?: LSN, isReplicating?: ReplicationStatus): Replication {
     return {
       authenticated: false,
-      isReplicating: ReplicationStatus.STOPPED,
+      isReplicating: isReplicating ? isReplicating : ReplicationStatus.STOPPED,
       relations: new Map(),
-      ack_lsn: current?.ack_lsn ? current.ack_lsn : DEFAULT_LSN,
-      sent_lsn: current?.sent_lsn ? current.sent_lsn : DEFAULT_LSN,
+      ack_lsn: ack ? ack : DEFAULT_LSN,
+      enqueued_lsn: enqueued ? enqueued : DEFAULT_LSN,
       transactions: []
     }
   }
@@ -115,15 +115,21 @@ export class SatelliteClient extends EventEmitter implements Client {
     });
   }
 
+  isClosed(): boolean {
+    return !this.socketHandler
+  }
+
   startReplication(lsn: LSN = DEFAULT_LSN): Promise<void | SatelliteError> {
     if (this.inbound.isReplicating != ReplicationStatus.STOPPED) {
       return Promise.reject(new SatelliteError(
         SatelliteErrorCode.REPLICATION_ALREADY_STARTED, `replication already started`));
     }
-    this.inbound = this.resetReplication(this.inbound);
 
-    this.inbound.isReplicating = ReplicationStatus.STARTING;
-    this.inbound.ack_lsn = lsn;
+    this.inbound = this.resetReplication(
+      this.inbound.enqueued_lsn,
+      this.inbound.ack_lsn,
+      ReplicationStatus.STARTING
+    );
 
     const request = SatInStartReplicationReq.fromPartial({ lsn });
     return this.rpc(request);
@@ -156,16 +162,13 @@ export class SatelliteClient extends EventEmitter implements Client {
 
   enqueueTransaction(transaction: Transaction): void | SatelliteError {
     if (this.outbound.isReplicating != ReplicationStatus.ACTIVE) {
-
-      // TODO: Client should not allow queueing transactions when Satellite 
-      // is working in offline mode
-      return
-
-      // throw new SatelliteError(SatelliteErrorCode.REPLICATION_NOT_STARTED,
-      //   "enqueuing a transaction while outbound replication has not started")
+      throw new SatelliteError(SatelliteErrorCode.REPLICATION_NOT_STARTED,
+        "enqueuing a transaction while outbound replication has not started")
     }
 
     this.outbound.transactions.push(transaction)
+    this.outbound.enqueued_lsn = transaction.lsn
+
     if (this.throttledPushTransaction) {
       this.throttledPushTransaction()
     }
@@ -185,7 +188,6 @@ export class SatelliteClient extends EventEmitter implements Client {
       const satOpLog: SatOpLog = this.transactionToSatOpLog(next)
 
       this.sendMessage(satOpLog)
-      this.outbound.sent_lsn = next.lsn
       this.emit('ack_lsn', next.lsn, false)
     }
   }
@@ -196,7 +198,15 @@ export class SatelliteClient extends EventEmitter implements Client {
 
   unsubscribeToAck(callback: AckCallback) {    
     this.removeListener('ack_lsn', callback)
-  }  
+  }
+
+  subscribeToOutboundEvent(_event: 'started', callback: () => void): void {
+    this.on('outbound_started', callback)
+  }
+
+  unsubscribeToOutboundEvent(_event: 'started', callback: () => void) {
+    this.removeListener('outbound_started', callback)
+  }
 
   private sendMissingRelations(transaction: Transaction, replication: Replication): void {
     transaction.changes.forEach(change => {
@@ -299,20 +309,23 @@ export class SatelliteClient extends EventEmitter implements Client {
 
   private handleStartReq(message: SatInStartReplicationReq) {
     if (this.outbound.isReplicating == ReplicationStatus.STOPPED) {
-      this.outbound = this.resetReplication(this.outbound);
-      this.outbound.isReplicating = ReplicationStatus.ACTIVE;
-      if (message.options.find(o =>
-        o == SatInStartReplicationReq_Option.LAST_ACKNOWLEDGED)) {
-        this.outbound.ack_lsn = this.outbound.sent_lsn;
-      } else {
-        this.outbound.ack_lsn = message.lsn;
+      const replication = { ...this.outbound }
+      if (!message.options.find(o =>
+        o == SatInStartReplicationReq_Option.LAST_ACKNOWLEDGED)) {        
+        replication.ack_lsn = message.lsn;
+        replication.enqueued_lsn = message.lsn;
       }
+      this.outbound = this.resetReplication(
+        replication.enqueued_lsn,
+        replication.ack_lsn,
+        ReplicationStatus.ACTIVE);
 
       const throttleOpts = { leading: true, trailing: true }
       this.throttledPushTransaction = throttle(() => this.pushTransactions(), this.opts.pushPeriod, throttleOpts)
 
       const response = SatInStartReplicationResp.fromPartial({});
       this.sendMessage(response);
+      this.emit('outbound_started', replication.enqueued_lsn)
     } else {
       // TODO: what error?
       const response = SatErrorResp.fromPartial({ errorType: SatErrorResp_ErrorCode.REPLICATION_FAILED });
@@ -403,6 +416,7 @@ export class SatelliteClient extends EventEmitter implements Client {
       new Error(`server replied with error code: ${error.errorType}`))
   }
 
+  // TODO: properly handle socket errors; update connectivity state
   private handleIncoming(data: Buffer) {
     const messageOrError = this.toMessage(data);
     if (messageOrError instanceof Error) {
@@ -437,7 +451,7 @@ export class SatelliteClient extends EventEmitter implements Client {
         }
         // in the future, emitting this event can be decoupled
         this.emit('transaction', transaction,
-          () => this.inbound.ack_lsn = transaction.lsn as any);
+          () => this.inbound.ack_lsn = transaction.lsn);
         replication.transactions.splice(lastTxnIdx)
       }
 
@@ -567,8 +581,11 @@ export class SatelliteClient extends EventEmitter implements Client {
     }).finally(() => clearTimeout(waitingFor));
   }
 
-  setOutboundLogPositions(sent: LSN, ack: LSN): void {
-    this.outbound.ack_lsn = ack
-    this.outbound.sent_lsn = sent
+  resetOutboundLogPositions(sent: LSN, ack: LSN): void {
+    this.outbound = this.resetReplication(sent, ack)
+  }
+
+  getOutboundLogPositions(): { enqueued: LSN, ack: LSN } {
+    return { ack: this.outbound.ack_lsn, enqueued: this.outbound.enqueued_lsn }
   }
 }

@@ -88,10 +88,12 @@ test.beforeEach(t => {
 })
 
 test.afterEach.always(async t => {
-  const { dbName } = t.context as any
+  const { dbName, satellite } = t.context as any
 
   await removeFile(dbName, {force: true})
   await removeFile(`${dbName}-journal`, {force: true})
+
+  await satellite.stop()
 })
 
 test('setup starts a satellite process', async t => {
@@ -675,6 +677,44 @@ test('rowid acks updates meta', async t => {
 
   const lsn = await satellite['_getMeta']('lastSentRowId')
   t.is(lsn, "1")
+})
+
+test('handling connectivity state change stops queueing operations', async t => {
+  const { runMigrations, satellite, adapter } = t.context as ContextType
+  await runMigrations()
+  await satellite.start()
+
+  adapter.run({ sql: `INSERT INTO parent(id, value, otherValue) VALUES (1, 'local', 1)` })
+
+  await satellite._performSnapshot()
+
+  const lsn = await satellite._getMeta('lastSentRowId')
+  t.is(lsn, "1")
+
+  await new Promise<void>((res) => {
+    setTimeout(async () => {
+      const lsn = await satellite._getMeta('lastAckdRowId')
+      t.is(lsn, "1")
+      res()
+    }, 100)
+  })
+
+  satellite.connectivityStateChange('disconnected')
+
+  adapter.run({ sql: `INSERT INTO parent(id, value, otherValue) VALUES (2, 'local', 1)` })
+
+  await satellite._performSnapshot()
+
+  const lsn1 = await satellite._getMeta('lastSentRowId')
+  t.is(lsn1, "1")
+
+
+  await satellite.connectivityStateChange('connected')
+
+  setTimeout(async () => {
+    const lsn2 = await satellite._getMeta('lastSentRowId')
+    t.is(lsn2, "2")
+  }, 200)
 })
 
 // Document if we support CASCADE https://www.sqlite.org/foreignkeys.html

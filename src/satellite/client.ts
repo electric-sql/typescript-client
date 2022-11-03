@@ -38,8 +38,6 @@ export class SatelliteClient extends EventEmitter implements Client {
   private socketHandler?: (any: any) => void;
   private throttledPushTransaction?: () => void;
 
-  private ackListeners: AckCallback[] = []
-
   private handlerForMessageType: { [k: string]: IncomingHandler } = {
     "Electric.Satellite.SatAuthResp": { handle: (resp) => this.handleAuthResp(resp), isRpc: true },
     "Electric.Satellite.SatInStartReplicationResp": { handle: () => this.handleStartResp(), isRpc: true },
@@ -193,17 +191,12 @@ export class SatelliteClient extends EventEmitter implements Client {
   }
 
   subscribeToAck(callback: AckCallback): void {
-    this.ackListeners.push(callback)
     this.on('ack_lsn', callback)
   }
 
-  unsubscribeToAck(callback: AckCallback) {
-    const idx = this.ackListeners.findIndex((cb) => cb == callback)
-    if (idx >= 0) {
-      this.ackListeners.splice(idx)
-      this.removeListener('ack_lsn', callback)
-    }
-  }
+  unsubscribeToAck(callback: AckCallback) {    
+    this.removeListener('ack_lsn', callback)
+  }  
 
   private sendMissingRelations(transaction: Transaction, replication: Replication): void {
     transaction.changes.forEach(change => {

@@ -18,7 +18,7 @@ import { SatelliteProcess } from '../../src/satellite/process'
 
 import { initTableInfo, loadSatelliteMetaTable, generateOplogEntry, TableInfo } from '../support/satellite-helpers'
 import Long from 'long'
-import { ChangeType, LSN, SqlValue, Transaction } from '../../src/util/types'
+import { ChangeType, ConnectivityStatus, LSN, SqlValue, Transaction } from '../../src/util/types'
 import { relations } from './common'
 import { Satellite } from '../../src/satellite'
 import { base64, DEFAULT_LSN, numberToBytes } from '../../src/util/common'
@@ -39,6 +39,7 @@ interface TestSatellite extends Satellite {
   _setMeta(key: string, value: SqlValue): Promise<void>
   _getMeta(key: string): Promise<string>
   _ack(lsn: number, isAck: boolean): Promise<void>
+  _connectivityStateChange(status: ConnectivityStatus): void
 
 }
 
@@ -699,7 +700,7 @@ test('handling connectivity state change stops queueing operations', async t => 
     }, 100)
   })
 
-  satellite.connectivityStateChange('disconnected')
+  satellite._connectivityStateChange('disconnected')
 
   adapter.run({ sql: `INSERT INTO parent(id, value, otherValue) VALUES (2, 'local', 1)` })
 
@@ -709,7 +710,7 @@ test('handling connectivity state change stops queueing operations', async t => 
   t.is(lsn1, "1")
 
 
-  await satellite.connectivityStateChange('connected')
+  await satellite._connectivityStateChange('connected')
 
   setTimeout(async () => {
     const lsn2 = await satellite._getMeta('lastSentRowId')

@@ -17,7 +17,7 @@ import {
   SatTransOp,
 } from '../_generated/proto/satellite';
 import { getObjFromString, getSizeBuf, getTypeFromCode, SatPbMsg } from '../util/proto';
-import { Socket } from '../sockets/index';
+import { Socket, SocketFactory } from '../sockets/index';
 import _m0 from 'protobufjs/minimal.js';
 import { EventEmitter } from 'events';
 import { AckCallback, AuthResponse, ChangeType, LSN, RelationColumn, Replication, ReplicationStatus, SatelliteError, SatelliteErrorCode, Transaction } from '../util/types';
@@ -31,7 +31,8 @@ type IncomingHandler = { handle: (msg: any) => any | void, isRpc: boolean }
 export class SatelliteClient extends EventEmitter implements Client {
   private opts: SatelliteClientOpts;
 
-  private socket: Socket;
+  private socketFactory: SocketFactory;
+  private socket?: Socket;
   private inbound: Replication;
   private outbound: Replication;
 
@@ -55,16 +56,16 @@ export class SatelliteClient extends EventEmitter implements Client {
     delayFirstAttempt: false,
     startingDelay: 100,
     jitter: 'none',
-    maxDelay: 3000,
+    maxDelay: 100,
     numOfAttempts: 10,
     timeMultiple: 2
   }
 
-  constructor(socket: Socket, opts: SatelliteClientOverrides) {
+  constructor(socketFactory: SocketFactory, opts: SatelliteClientOverrides) {
     super();
 
     this.opts = { ...satelliteClientDefaults, ...opts };
-    this.socket = socket;
+    this.socketFactory = socketFactory;
 
     this.inbound = this.resetReplication();
     this.outbound = this.resetReplication();
@@ -83,13 +84,19 @@ export class SatelliteClient extends EventEmitter implements Client {
 
   connect(retryHandler?: (error: any, attempt: number) => boolean): Promise<void | SatelliteError> {
     const connectPromise = new Promise<void>((resolve, reject) => {
+      // TODO: ensure any previous socket is closed, or reject
+      if (this.socket) {
+        throw new SatelliteError(SatelliteErrorCode.UNEXPECTED_STATE, "a socket already exist. ensure it is closed before reconnecting.")
+      }
+      this.socket = this.socketFactory.create()
       this.socket.onceConnect(() => {
         this.socketHandler = message => this.handleIncoming(message)
-        this.socket.onMessage(this.socketHandler)
+        this.socket!.onMessage(this.socketHandler)
         resolve()
       })
 
       this.socket.onceError(error => {
+        this.socket = undefined
         reject(error)
       })
 
@@ -107,12 +114,17 @@ export class SatelliteClient extends EventEmitter implements Client {
   }
 
   close(): Promise<void> {
-    return new Promise(resolve => {
-      this.socketHandler = undefined;
-      this.removeAllListeners();
-      this.socket.closeAndRemoveListeners();
-      resolve();
-    });
+    console.log("closing client")
+
+    this.outbound = this.resetReplication(this.outbound.enqueued_lsn, this.outbound.ack_lsn)
+    this.inbound = this.resetReplication(this.inbound.enqueued_lsn, this.inbound.ack_lsn)
+
+    this.socketHandler = undefined;
+    this.removeAllListeners();
+    this.socket!.closeAndRemoveListeners();
+    this.socket = undefined
+
+    return Promise.resolve()
   }
 
   isClosed(): boolean {
@@ -125,11 +137,9 @@ export class SatelliteClient extends EventEmitter implements Client {
         SatelliteErrorCode.REPLICATION_ALREADY_STARTED, `replication already started`));
     }
 
-    this.inbound = this.resetReplication(
-      this.inbound.enqueued_lsn,
-      this.inbound.ack_lsn,
-      ReplicationStatus.STARTING
-    );
+    this.inbound = this.resetReplication(lsn, lsn, ReplicationStatus.STARTING)
+
+    console.log(`starting replication with lsn ${lsn}`)
 
     const request = SatInStartReplicationReq.fromPartial({ lsn });
     return this.rpc(request);
@@ -187,6 +197,7 @@ export class SatelliteClient extends EventEmitter implements Client {
       this.sendMissingRelations(next, this.outbound)
       const satOpLog: SatOpLog = this.transactionToSatOpLog(next)
 
+      console.log(`sending message with lsn${JSON.stringify(next.lsn)}`)
       this.sendMessage(satOpLog)
       this.emit('ack_lsn', next.lsn, false)
     }
@@ -308,6 +319,7 @@ export class SatelliteClient extends EventEmitter implements Client {
   }
 
   private handleStartReq(message: SatInStartReplicationReq) {
+    console.log(`received replication request ${JSON.stringify(message)}`)
     if (this.outbound.isReplicating == ReplicationStatus.STOPPED) {
       const replication = { ...this.outbound }
       if (!message.options.find(o =>
@@ -392,6 +404,7 @@ export class SatelliteClient extends EventEmitter implements Client {
   }
 
   private handlePingReq() {
+    console.log(`respond to ping with last ack ${this.inbound.ack_lsn}`)
     const pong = SatPingResp.fromPartial({ lsn: this.inbound.ack_lsn });
     this.sendMessage(pong);
   }
@@ -546,6 +559,9 @@ export class SatelliteClient extends EventEmitter implements Client {
   }
 
   private sendMessage(request: SatPbMsg) {
+    if (!this.socket) {
+      throw new SatelliteError(SatelliteErrorCode.UNEXPECTED_STATE, "trying to send message, but no socket exists")
+    }
     const obj = getObjFromString(request.$type);
     if (obj == undefined) {
       throw new SatelliteError(SatelliteErrorCode.UNEXPECTED_MESSAGE_TYPE, `${request.$type})`);

@@ -12,11 +12,11 @@ import { MockRegistry } from '../../satellite/mock'
 import { DatabaseAdapter } from './adapter'
 import { Database, ElectricDatabase, ElectrifiedDatabase } from './database'
 import { MockDatabase } from './mock'
-import { MockSocket } from '../../sockets/mock'
+import { MockSocketFactory } from '../../sockets/mock'
 
 type RetVal = Promise<[Database, Notifier, ElectrifiedDatabase]>
 
-const testOpts = { config: {app: "app", replication: {address: "", port: 0}}}
+const testOpts = { config: { app: "app", replication: { address: "", port: 0 } } }
 
 export const initTestable = async (dbName: DbName, opts: ElectrifyOptions = testOpts): RetVal => {
   const db = new MockDatabase(dbName)
@@ -24,12 +24,12 @@ export const initTestable = async (dbName: DbName, opts: ElectrifyOptions = test
   const adapter = opts.adapter || new DatabaseAdapter(db)
   const notifier = opts.notifier || new MockNotifier(dbName)
   const migrator = opts.migrator || new MockMigrator()
-  const socket = opts.socket || new MockSocket()
+  const socketFactory = opts.socketFactory || new MockSocketFactory()
   const registry = opts.registry || new MockRegistry()
 
   const namespace = new ElectricNamespace(adapter, notifier)
   const electric = new ElectricDatabase(db, namespace)
 
-  const electrified = await electrify(dbName, db, electric, adapter, migrator, notifier, socket, registry, opts)
+  const electrified = await electrify(dbName, db, electric, adapter, migrator, notifier, socketFactory, registry, opts)
   return [db, notifier, electrified as unknown as ElectrifiedDatabase]
 }

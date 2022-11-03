@@ -3,10 +3,10 @@ import throttle from 'lodash.throttle'
 import { AuthState } from '../auth/index'
 import { DatabaseAdapter } from '../electric/adapter'
 import { Migrator } from '../migrators/index'
-import { AuthStateNotification, Change, Notifier } from '../notifiers/index'
-import { Client, ConnectivityStatus } from './index'
+import { AuthStateNotification, Change, ConnectivityChangeNotification, Notifier } from '../notifiers/index'
+import { Client } from './index'
 import { QualifiedTablename } from '../util/tablename'
-import { AckType, DbName, LSN, Relation, RelationsCache, SatelliteError, SqlValue, Statement, Transaction } from '../util/types'
+import { AckType, ConnectivityStatus, DbName, LSN, Relation, RelationsCache, SatelliteError, SqlValue, Statement, Transaction } from '../util/types'
 import { Satellite } from './index'
 import { SatelliteOpts } from './config'
 import { mergeChangesLastWriteWins, mergeOpTypesAddWins } from './merge'
@@ -33,6 +33,7 @@ export class SatelliteProcess implements Satellite {
   _lastSnapshotTimestamp?: Date
   _pollingInterval?: any
   _potentialDataChangeSubscription?: string
+  _connectivityChangeSubscription?: string
   _throttledSnapshot: () => void
 
   _lastAckdRowId: number
@@ -97,6 +98,11 @@ export class SatelliteProcess implements Satellite {
     // Request a snapshot whenever the data in our database potentially changes.
     this._potentialDataChangeSubscription = this.notifier.subscribeToPotentialDataChanges(this._throttledSnapshot)
 
+    const connectivityChangeCallback = (notification: ConnectivityChangeNotification) => {
+      this._connectivityChange(notification.status)
+    }
+    this._connectivityChangeSubscription = this.notifier.subscribeToConnectivityChanges(connectivityChangeCallback)
+
     // Start polling to request a snapshot every `pollingInterval` ms.
     this._pollingInterval = setInterval(this._throttledSnapshot, this.opts.pollingInterval)
 
@@ -129,6 +135,7 @@ export class SatelliteProcess implements Satellite {
 
     const lsnBase64 = await this._getMeta('lsn')
     this._lsn = base64.toBytes(lsnBase64)
+    console.log(`retrieved lsn ${this._lsn}`)
 
     return this._connectAndStartReplication();
   }
@@ -148,14 +155,15 @@ export class SatelliteProcess implements Satellite {
     await this.client.close();
   }
 
-  connectivityStatusChange(status: ConnectivityStatus): Promise<void | SatelliteError> {
+  async _connectivityChange(status: ConnectivityStatus): Promise<void | SatelliteError> {
+    console.log(`connectivity status change ${status}`)
+    // TODO: no op if state is the same
     switch (status) {
       case "connected": {
         return this._connectAndStartReplication()
       }
       case "disconnected": {
-        this.client.close()
-        return Promise.resolve()
+        return this.client.close()
       }
       default: {
         throw new Error(`unexpected connectivity state: ${status}`)
@@ -164,6 +172,7 @@ export class SatelliteProcess implements Satellite {
   }
 
   async _connectAndStartReplication(): Promise<void | SatelliteError> {
+    console.log(`connecting and starting replication`)
     return this.client.connect()
       .then(() => this.client.authenticate())
       .then(() => this.client.startReplication(this._lsn))
@@ -234,7 +243,13 @@ export class SatelliteProcess implements Satellite {
       // TODO: take next N transactions instead of all
       const promise =
         this._getEntries(enqueuedLogPos)
-          .then((missing) => this._replicateSnapshotChanges(missing))
+          .then((missing) => {
+            if (missing && missing.length > 0) {
+              console.log(`missing ${missing.length}`)
+            }
+
+            this._replicateSnapshotChanges(missing)
+          })
       promises.push(promise)
     }
 

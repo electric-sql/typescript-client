@@ -3,15 +3,15 @@ import { ElectrifyOptions } from '../electric'
 import { DatabaseAdapter } from '../electric/adapter'
 import { Migrator } from '../migrators/index'
 import { Notifier } from '../notifiers/index'
-import { Socket } from '../sockets'
-import { AckCallback, AuthResponse, ConnectivityStatus, DbName, LSN, SatelliteError, Transaction } from '../util/types'
+import { SocketFactory } from '../sockets'
+import { AckCallback, AuthResponse, DbName, LSN, SatelliteError, Transaction } from '../util/types'
 
 export { SatelliteProcess } from './process'
 export { GlobalRegistry, globalRegistry } from './registry'
 
 // `Registry` that starts one Satellite process per database.
 export interface Registry {
-  ensureStarted(dbName: DbName, adapter: DatabaseAdapter, migrator: Migrator, notifier: Notifier, socket: Socket, opts: ElectrifyOptions, authState?: AuthState): Promise<Satellite>
+  ensureStarted(dbName: DbName, adapter: DatabaseAdapter, migrator: Migrator, notifier: Notifier, socketFactory: SocketFactory, opts: ElectrifyOptions, authState?: AuthState): Promise<Satellite>
   ensureAlreadyStarted(dbName: DbName): Promise<Satellite>
   stop(dbName: DbName): Promise<void>
   stopAll(): Promise<void>
@@ -28,7 +28,6 @@ export interface Satellite {
 
   start(authState?: AuthState): Promise<void | Error>
   stop(): Promise<void>
-  connectivityStatusChange(status: ConnectivityStatus): Promise<void | SatelliteError>
 }
 
 

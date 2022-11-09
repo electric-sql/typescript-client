@@ -327,6 +327,12 @@ export class SatelliteClient extends EventEmitter implements Client {
         replication.ack_lsn = message.lsn;
         replication.enqueued_lsn = message.lsn;
       }
+      if (!message.options.find(o =>
+        o == SatInStartReplicationReq_Option.FIRST_LSN)) {
+        replication.ack_lsn = DEFAULT_LSN;
+        replication.enqueued_lsn = DEFAULT_LSN;
+      }
+
       this.outbound = this.resetReplication(
         replication.enqueued_lsn,
         replication.ack_lsn,

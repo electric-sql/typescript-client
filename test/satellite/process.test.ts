@@ -721,7 +721,7 @@ test('handling connectivity state change stops queueing operations', async t => 
     }, 100)
   })
 
-  satellite._connectivityStateChange('disconnected')
+  satellite._connectivityChange('disconnected')
 
   adapter.run({ sql: `INSERT INTO parent(id, value, otherValue) VALUES (2, 'local', 1)` })
 
@@ -731,7 +731,7 @@ test('handling connectivity state change stops queueing operations', async t => 
   t.is(lsn1, "1")
 
 
-  await satellite._connectivityStateChange('connected')
+  await satellite._connectivityChange('connected')
 
   setTimeout(async () => {
     const lsn2 = await satellite._getMeta('lastSentRowId')

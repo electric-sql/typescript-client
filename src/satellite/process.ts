@@ -6,7 +6,7 @@ import { Migrator } from '../migrators/index'
 import { AuthStateNotification, Change, Notifier } from '../notifiers/index'
 import { Client } from './index'
 import { QualifiedTablename } from '../util/tablename'
-import { AckType, DbName, LSN, Relation, RelationsCache, Row, SatelliteError, SqlValue, Statement, Transaction } from '../util/types'
+import { AckType, DbName, LSN, Relation, RelationsCache, SatelliteError, SqlValue, Statement, Transaction } from '../util/types'
 import { Satellite } from './index'
 import { SatelliteOpts } from './config'
 import { mergeChangesLastWriteWins, mergeOpTypesAddWins } from './merge'
@@ -423,28 +423,23 @@ export class SatelliteProcess implements Satellite {
   }
 
   async _getMeta(key: string): Promise<string> {
-    const rows = await this._getMetaValue(key)
-    return rows[0]!.value as any
-  }
-
-  private async _getMetaValue(key: string): Promise<Row[]> {
     const meta = this.opts.metaTable.toString()
 
     const sql = `SELECT value from ${meta} WHERE key = ?`
     const args = [key]
-    return this.adapter.query({ sql, args })
+    const rows = await this.adapter.query({ sql, args })
+
+    if (rows.length !== 1) {
+      throw `Invalid metadata table: missing ${key}`
+    }
+
+    return rows[0].value as string
   }
 
   private async _getClientId(): Promise<string> {
     let clientIdKey = "clientId"
 
-    const rows = await this._getMetaValue(clientIdKey)
-
-    if (rows.length !== 1) {
-      throw `Invalid metadata table, missing ${clientIdKey}`
-    }
-
-    let clientId: string = rows[0].value as string
+    let clientId: string = await this._getMeta(clientIdKey)
 
     if (clientId === '') {
       clientId = uuidv4() as string

@@ -141,7 +141,7 @@ export class SatelliteProcess implements Satellite {
     this._lsn = base64.toBytes(lsnBase64)
     console.log(`retrieved lsn ${this._lsn}`)
 
-    return this._connectAndStartReplication(clientId;
+    return this._connectAndStartReplication(clientId)
   }
 
   // Unsubscribe from data changes and stop polling
@@ -164,7 +164,7 @@ export class SatelliteProcess implements Satellite {
     // TODO: no op if state is the same
     switch (status) {
       case "connected": {
-        return this._connectAndStartReplication()
+        return this._connectAndStartReplication(this._clientId)
       }
       case "disconnected": {
         return this.client.close()
@@ -175,7 +175,7 @@ export class SatelliteProcess implements Satellite {
     }
   }
 
-  async _connectAndStartReplication(clientId): Promise<void | SatelliteError> {
+  async _connectAndStartReplication(clientId: string): Promise<void | SatelliteError> {
     console.log(`connecting and starting replication`)
     return this.client.connect()
       .then(() => this.client.authenticate(clientId))

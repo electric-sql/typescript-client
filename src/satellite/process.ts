@@ -114,24 +114,14 @@ export class SatelliteProcess implements Satellite {
     // Need to reload primary keys after schema migration
     // For now, we do it only at initialization
     this.relations = await this._getLocalRelations()
-    this.client.subscribeToTransactions(async (transaction: Transaction) => {
-      this._applyTransaction(transaction)
-    })
-
-    // When a local transaction is sent, or an acknowledgement for 
-    // a remote transaction commit is received, we update lsn records.
-    this.client.subscribeToAck(async (lsn, type) => {
-      const decoded = bytesToNumber(lsn)
-      await this._ack(decoded, type == AckType.REMOTE_COMMIT)
-    })
 
     const clientId = await this._getClientId()
 
     this._clientId = clientId
-    this.client.subscribeToOutboundEvent('started', () => this._throttledSnapshot())
     this._lastAckdRowId = Number(await this._getMeta('lastAckdRowId'))
     this._lastSentRowId = Number(await this._getMeta('lastSentRowId'))
 
+    this.set_client_listeners()
     this.client.resetOutboundLogPositions(
       numberToBytes(this._lastAckdRowId),
       numberToBytes(this._lastSentRowId),
@@ -144,8 +134,22 @@ export class SatelliteProcess implements Satellite {
     return this._connectAndStartReplication()
   }
 
+  set_client_listeners(): void {
+    this.client.subscribeToTransactions(async (transaction: Transaction) => {
+      this._applyTransaction(transaction)
+    })
+    // When a local transaction is sent, or an acknowledgement for
+    // a remote transaction commit is received, we update lsn records.
+    this.client.subscribeToAck(async (lsn, type) => {
+      const decoded = bytesToNumber(lsn)
+      await this._ack(decoded, type == AckType.REMOTE_COMMIT)
+    })
+    this.client.subscribeToOutboundEvent('started', () => this._throttledSnapshot())
+  }
+
   // Unsubscribe from data changes and stop polling
   async stop(): Promise<void> {
+    console.log('stop polling')
     if (this._pollingInterval !== undefined) {
       clearInterval(this._pollingInterval)
       this._pollingInterval = undefined
@@ -164,6 +168,7 @@ export class SatelliteProcess implements Satellite {
     // TODO: no op if state is the same
     switch (status) {
       case "connected": {
+        this.set_client_listeners()
         return this._connectAndStartReplication()
       }
       case "disconnected": {
@@ -176,7 +181,7 @@ export class SatelliteProcess implements Satellite {
   }
 
   async _connectAndStartReplication(): Promise<void | SatelliteError> {
-    console.log(`connecting and starting replication`)
+    console.log(`connecting and starting replication ${this._lsn}`)
     return this.client.connect()
       .then(() => this.client.authenticate(this._clientId!))
       .then(() => this.client.startReplication(this._lsn))
@@ -260,6 +265,7 @@ export class SatelliteProcess implements Satellite {
     await Promise.all(promises)
   }
   async _notifyChanges(results: OplogEntry[]): Promise<void> {
+    console.log("notify changes")
     const acc: ChangeAccumulator = {}
 
     // Would it be quicker to do this using a second SQL query that
@@ -295,6 +301,7 @@ export class SatelliteProcess implements Satellite {
       return;
     }
 
+    console.log("replicate snapshot changes")
     const transactions = toTransactions(results, this.relations)
     for (const txn of transactions) {
       return this.client.enqueueTransaction(txn);
@@ -304,8 +311,10 @@ export class SatelliteProcess implements Satellite {
   // Apply a set of incoming transactions against pending local operations,
   // applying conflict resolution rules. Takes all changes per each key
   // before merging, for local and remote operations.
-  async _apply(incoming: OplogEntry[], lsn: LSN = DEFAULT_LSN): Promise<void> {
+  async _apply(incoming: OplogEntry[], lsn: LSN): Promise<void> {
     // assign timestamp to pending operations before apply
+    //
+    console.log("apply incomming changes: ${lsn}")
     await this._performSnapshot()
 
     const local = await this._getEntries()
@@ -315,8 +324,10 @@ export class SatelliteProcess implements Satellite {
     // switches off on transaction commit/abort
     stmts.push({ sql: "PRAGMA defer_foreign_keys = ON" })
     // update lsn. 
-    const lsnBase64 = base64.fromBytes(lsn)
-    stmts.push({ sql: `UPDATE ${this.opts.metaTable.tablename} set value = ? WHERE key = ?`, args: [lsnBase64, 'lsn'] })
+    this._lsn = lsn
+    const lsn_base64 = base64.fromBytes(lsn)
+    stmts.push({ sql: `UPDATE ${this.opts.metaTable.tablename} set value = ? WHERE key = ?`,
+                 args: [ lsn_base64, 'lsn'] })
 
     for (const [tablenameStr, mapping] of Object.entries(merged)) {
       for (const entryChanges of Object.values(mapping)) {
@@ -440,6 +451,7 @@ export class SatelliteProcess implements Satellite {
   }
 
   async _ack(lsn: number, isAck: boolean): Promise<void> {
+    console.log("ack lsn")
     if (lsn < this._lastAckdRowId || (lsn > this._lastSentRowId && isAck)) {
       throw new Error('Invalid position')
     }

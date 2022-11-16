@@ -121,8 +121,10 @@ export class SatelliteClient extends EventEmitter implements Client {
 
     this.socketHandler = undefined;
     this.removeAllListeners();
-    this.socket!.closeAndRemoveListeners();
-    this.socket = undefined
+    if (this.socket != undefined) {
+      this.socket!.closeAndRemoveListeners();
+      this.socket = undefined
+    }
 
     return Promise.resolve()
   }

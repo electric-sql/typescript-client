@@ -173,9 +173,9 @@ export class GlobalRegistry extends BaseRegistry {
       token: "TODO"
     }
 
-    const client = new SatelliteClient(socketFactory, satelliteClientOpts)
+    const client = new SatelliteClient(dbName, socketFactory, notifier, satelliteClientOpts)
     const satellite = new SatelliteProcess(dbName, adapter, migrator, notifier, client, satelliteDefaults)
-    await satellite.start(authState)
+    satellite.start(authState)
 
     return satellite
   }

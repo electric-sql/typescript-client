@@ -10,6 +10,7 @@ import { MockRegistry } from '../../satellite/mock'
 import { DatabaseAdapter } from './adapter'
 import { Config, Database, ElectricDatabase, QueryExecResult, Statement } from './database'
 import { MockSocketFactory } from '../../sockets/mock'
+import { ElectricConfig } from '../../satellite/config'
 
 interface TestData {
   notifications: Notification[]
@@ -112,25 +113,25 @@ export class MockElectricWorker extends WorkerServer {
     return true
   }
 
-  async open(dbName: DbName): Promise<boolean> {
+  async open(dbName: DbName, config: ElectricConfig): Promise<boolean> {
     if (!this.SQL) {
       throw new RequestError(400, 'Must init before opening')
     }
 
     const opts = this.opts
-    const registry = opts.registry || new MockRegistry()
+    const registry = opts?.registry || new MockRegistry()
 
     if (!(dbName in this._dbs)) {
       const db = new MockDatabase(dbName)
-      const adapter = opts.adapter || new DatabaseAdapter(db)
-      const migrator = opts.migrator || new MockMigrator()
-      const notifier = opts.notifier || new MockNotifier(dbName)
-      const socketFactory = opts.socketFactory || new MockSocketFactory()
+      const adapter = opts?.adapter || new DatabaseAdapter(db)
+      const migrator = opts?.migrator || new MockMigrator()
+      const notifier = opts?.notifier || new MockNotifier(dbName)
+      const socketFactory = opts?.socketFactory || new MockSocketFactory()
 
       const namespace = new ElectricNamespace(adapter, notifier)
       this._dbs[dbName] = new ElectricDatabase(db, namespace, this.worker.user_defined_functions)
 
-      await registry.ensureStarted(dbName, adapter, migrator, notifier, socketFactory, opts)
+      await registry.ensureStarted(dbName, adapter, migrator, notifier, socketFactory, config)
     }
     else {
       await registry.ensureAlreadyStarted(dbName)

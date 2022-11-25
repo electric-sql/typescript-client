@@ -1,6 +1,6 @@
 import { AnyDatabase, AnyElectricDatabase, AnyElectrifiedDatabase } from '../drivers/index'
 import { DatabaseAdapter } from '../electric/adapter'
-import { Migration, Migrator } from '../migrators/index'
+import { Migrator } from '../migrators/index'
 import { Notifier } from '../notifiers/index'
 import { Registry } from '../satellite/index'
 import { SocketFactory } from '../sockets/index'
@@ -12,13 +12,11 @@ import { ElectricConfig } from '../satellite/config'
 // entrypoint. They are all optional to optionally allow different / mock
 // implementations to be passed in to facilitate testing.
 export interface ElectrifyOptions {
-  migrations?: Migration[],
   adapter?: DatabaseAdapter,
   migrator?: Migrator,
   notifier?: Notifier,
   socketFactory?: SocketFactory,
   registry?: Registry,
-  config: ElectricConfig,  
 }
 
 // This is the namespace that's patched onto the user's database client
@@ -49,17 +47,17 @@ export class ElectricNamespace {
 // also be called directly by tests that don't want to go via the adapter
 // entrypoints in order to avoid loading the environment dependencies.
 export const electrify = async (
-      dbName: DbName,
-      db: AnyDatabase,
-      electric: AnyElectricDatabase,
-      adapter: DatabaseAdapter,
-      migrator: Migrator,
-      notifier: Notifier,
+  dbName: DbName,
+  db: AnyDatabase,
+  electric: AnyElectricDatabase,
+  adapter: DatabaseAdapter,
+  migrator: Migrator,
+  notifier: Notifier,
   socketFactory: SocketFactory,
-      registry: Registry,
-      opts: ElectrifyOptions,
-    ): Promise<AnyElectrifiedDatabase> => {
-  await registry.ensureStarted(dbName, adapter, migrator, notifier, socketFactory, opts)
+  registry: Registry,
+  config: ElectricConfig,
+): Promise<AnyElectrifiedDatabase> => {
+  await registry.ensureStarted(dbName, adapter, migrator, notifier, socketFactory, config)
 
   return proxyOriginal(db, electric)
 }

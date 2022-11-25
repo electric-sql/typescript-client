@@ -7,6 +7,7 @@ import { ElectricNamespace, ElectrifyOptions, electrify } from '../../electric/i
 import { MockMigrator } from '../../migrators/mock'
 import { Notifier } from '../../notifiers/index'
 import { MockNotifier } from '../../notifiers/mock'
+import { ElectricConfig } from '../../satellite/config'
 import { MockRegistry } from '../../satellite/mock'
 
 import { DatabaseAdapter } from './adapter'
@@ -15,18 +16,18 @@ import { MockDatabase, MockWebSQLDatabase } from './mock'
 import { MockSocketFactory } from '../../sockets/mock'
 
 type RetVal = Promise<[Database, Notifier, ElectrifiedDatabase]>
-const testOpts = { config: {app: "app", replication: {address: "", port: 0}}}
+const testConfig = { app: "app", env: "test", token: "token", replication: { address: "", port: 0 } }
 
-export const initTestable = async (dbName: DbName, useWebSQLDatabase: boolean = false, opts: ElectrifyOptions = testOpts): RetVal => {
+export const initTestable = async (dbName: DbName, useWebSQLDatabase: boolean = false, config: ElectricConfig = testConfig, opts?: ElectrifyOptions): RetVal => {
   const db = useWebSQLDatabase
     ? new MockWebSQLDatabase(dbName)
     : new MockDatabase(dbName)
 
-  const adapter = opts.adapter || new DatabaseAdapter(db)
-  const migrator = opts.migrator || new MockMigrator()
-  const notifier = opts.notifier || new MockNotifier(dbName)
-  const socketFactory = opts.socketFactory || new MockSocketFactory()
-  const registry = opts.registry || new MockRegistry()
+  const adapter = opts?.adapter || new DatabaseAdapter(db)
+  const migrator = opts?.migrator || new MockMigrator()
+  const notifier = opts?.notifier || new MockNotifier(dbName)
+  const socketFactory = opts?.socketFactory || new MockSocketFactory()
+  const registry = opts?.registry || new MockRegistry()
 
   const namespace = new ElectricNamespace(adapter, notifier)
 
@@ -38,6 +39,6 @@ export const initTestable = async (dbName: DbName, useWebSQLDatabase: boolean = 
     electric = new ElectricDatabase(db, namespace)
   }
 
-  const electrified = await electrify(dbName, db, electric, adapter, migrator, notifier, socketFactory, registry, opts)
+  const electrified = await electrify(dbName, db, electric, adapter, migrator, notifier, socketFactory, registry, config)
   return [db, notifier, electrified as unknown as ElectrifiedDatabase]
 }

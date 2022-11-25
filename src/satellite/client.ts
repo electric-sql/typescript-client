@@ -78,7 +78,7 @@ export class SatelliteClient extends EventEmitter implements Client {
 
     this.inbound = this.resetReplication();
     this.outbound = this.resetReplication();
-  }    
+  }
 
   private resetReplication(enqueued?: LSN, ack?: LSN, isReplicating?: ReplicationStatus): Replication {
     return {
@@ -223,7 +223,7 @@ export class SatelliteClient extends EventEmitter implements Client {
     this.on('ack_lsn', callback)
   }
 
-  unsubscribeToAck(callback: AckCallback) {    
+  unsubscribeToAck(callback: AckCallback) {
     this.removeListener('ack_lsn', callback)
   }
 
@@ -339,7 +339,7 @@ export class SatelliteClient extends EventEmitter implements Client {
     if (this.outbound.isReplicating == ReplicationStatus.STOPPED) {
       const replication = { ...this.outbound }
       if (!message.options.find(o =>
-        o == SatInStartReplicationReq_Option.LAST_ACKNOWLEDGED)) {        
+        o == SatInStartReplicationReq_Option.LAST_ACKNOWLEDGED)) {
         replication.ack_lsn = message.lsn;
         replication.enqueued_lsn = message.lsn;
       }
@@ -467,7 +467,7 @@ export class SatelliteClient extends EventEmitter implements Client {
 
   private processOpLogMessage(opLogMessage: SatOpLog, replication: Replication) {
     opLogMessage.ops.map((op) => {
-      if (op.begin) { 
+      if (op.begin) {
         const transaction = {
           commit_timestamp: op.begin.commitTimestamp,
           lsn: op.begin.lsn,
@@ -542,7 +542,7 @@ export class SatelliteClient extends EventEmitter implements Client {
         });
         replication.transactions[lastTxnIdx].changes.push(change);
       }
-    });    
+    });
   }
 
   private deserializeColumnData(column: Uint8Array, columnInfo: RelationColumn): string | number {

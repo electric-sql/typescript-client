@@ -1,32 +1,9 @@
 import {
-  SatInStopReplicationResp,
-  SatInStartReplicationResp,
-  SatOpCommit,
-  SatOpBegin,
-  SatOpLog,
-  SatPingReq,
-  SatOpInsert,
-  SatRelation,
-  SatRelationColumn,
   SatRelation_RelationType,
-  SatOpUpdate,
-  SatOpDelete,
-  SatTransOp,
-  SatAuthResp,
-  SatPingResp,
 } from '../../src/_generated/proto/satellite';
-import { WebSocketNodeFactory } from '../../src/sockets/node';
-import { SatelliteClient, serializeRow, deserializeRow } from '../../src/satellite/client';
-import { SatelliteWSServerStub } from './server_ws_stub';
+import { serializeRow, deserializeRow } from '../../src/satellite/client';
 import test from 'ava'
-import Long from 'long';
-import { AckType, ChangeType, SatelliteErrorCode, Transaction, Relation } from '../../src/util/types';
-import { base64, DEFAULT_LSN, bytesToNumber, typeEncoder, numberToBytes } from '../../src/util/common'
-import { getObjFromString, getTypeFromCode, getTypeFromString, SatPbMsg } from '../../src/util/proto';
-import { OplogEntry, toTransactions } from '../../src/satellite/oplog';
-import { relations } from './common';
-import { MockNotifier } from '../../src/notifiers';
-
+import { Relation } from '../../src/util/types';
 
 test("serialize/deserialize row data", async t => {
   const rel: Relation = {

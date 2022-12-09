@@ -69,6 +69,7 @@ export interface ElectricConfig {
     address: string
     port: number
   }
+  debug?: boolean,
 }
 
 

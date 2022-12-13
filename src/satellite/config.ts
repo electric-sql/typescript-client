@@ -80,7 +80,7 @@ export const validateConfig = (config : any) => {
     return errors
   }
   
-  const {replication, app} = config
+  const { app, env, replication, debug } = config
   
   if(!app){
     errors.push(`please provide an app identifier: ${config}`)
@@ -91,10 +91,24 @@ export const validateConfig = (config : any) => {
     errors.push("Please provide config.replication = {address, port} details to connect to dev infra")
     errors.push("We're still working to make ElectricSQL service live. You can join the wait list: https://console.electric-sql.com/join/waitlist")
   } else{
-    const {address, port } = replication
-    if(!address) {errors.push(`Please provide config.replication.address`)}
-    if(!port) {errors.push(`Please provide config.replication.port`)}
-    if(port && typeof port != 'number') {errors.push(`Please provide correct type for config.replication.port`)}
+    const { address, port, insecure } = replication
+
+    if (!address) {
+      errors.push(`Please provide config.replication.address`)
+    }
+    if (!port) {
+      errors.push(`Please provide config.replication.port`)
+    }
+    if (port && typeof port != 'number') {
+      errors.push(`Please provide correct type for config.replication.port`)
+    }
+    if (insecure && env != 'dev') {
+      errors.push(`insecure only valid for dev environment`)
+    }
+  }
+
+  if (debug) {
+    if (env != 'dev') { errors.push(`debug mode only valid for dev environment`) }
   }
 
   return errors

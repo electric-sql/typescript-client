@@ -155,7 +155,7 @@ export class GlobalRegistry extends BaseRegistry {
     migrator: Migrator,
     notifier: Notifier,
     socketFactory: SocketFactory,
-    config: ElectricConfig,
+    config: Required<ElectricConfig>,
     authState?: AuthState,
   ): Promise<Satellite> {
 
@@ -164,17 +164,14 @@ export class GlobalRegistry extends BaseRegistry {
       throw Error(`invalid config: ${foundErrors}`);
     }
 
-    // FIXME: what should these be?
-    const defaultAddress = `${config.app}-${config.env}.electric-sql.com`
-    const defaultPort = 5133
-
     const satelliteClientOpts = {
       ...satelliteClientDefaults,
       app: config.app,
-      env: config.env,
+      environment: config.env,
       token: config.token,
-      address: config.replication?.address || defaultAddress,
-      port: config.replication?.port || defaultPort,
+      host: config.replication.host,
+      port: config.replication.port,
+      insecure: config.replication.insecure
     }
 
     const client = new SatelliteClient(dbName, socketFactory, notifier, satelliteClientOpts)

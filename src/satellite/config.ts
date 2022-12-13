@@ -34,42 +34,60 @@ export const satelliteDefaults: SatelliteOpts = {
   minSnapshotWindow: 40
 }
 
+export const satelliteClientDefaults = {
+  env: "default" as Environment,
+  timeout: 3000,
+  pushPeriod: 500,
+  insecure: false
+}
+
+type Environment = "default" | "staging" | "prod" // what names? is it any name?
+const baseDomain = "electric-sql.com"
+
 export interface SatelliteClientOpts {
   app: string
-  env: string
+  env?: Environment
   token: string
+  host: string
   port: number
-  address: string
-  timeout: number
-  pushPeriod: number
-}
-
-export const satelliteClientDefaults = {
-  timeout: 3000,
-  pushPeriod: 500
-}
-
-export interface SatelliteClientOverrides {
-  app: string
-  env: string
-  token: string
-  port: number
-  address: string
   timeout?: number
   pushPeriod?: number
+  insecure?: boolean
 }
+
 
 // Config spec
 export interface ElectricConfig {
   app: string
-  env: string
+  env?: Environment
   token: string
   migrations?: Migration[],
   replication?: {
-    address: string
+    host: string
     port: number
+    insecure: boolean
   }
   debug?: boolean,
+}
+
+const electricConfigDefaults: Partial<ElectricConfig> = {
+  env: "default"
+}
+
+export const addDefaultsToElectricConfig = (config: ElectricConfig) => {
+  const makeHost = () => `${config.env}.${config.app}.${baseDomain}`
+
+  const host = (config.replication?.host) ? config.replication.host : makeHost()
+  const port = (config.replication?.port) ? config.replication.port : 443
+  const insecure = (config.replication?.insecure) ? config.replication.insecure : false
+
+  config = {
+    ...electricConfigDefaults,
+    ...config
+  }
+  config.replication = { ...config.replication, host, port, insecure }
+
+  return config
 }
 
 

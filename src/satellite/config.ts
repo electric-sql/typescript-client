@@ -35,18 +35,17 @@ export const satelliteDefaults: SatelliteOpts = {
 }
 
 export const satelliteClientDefaults = {
-  env: "default" as Environment,
+  env: "default",
   timeout: 3000,
   pushPeriod: 500,
   insecure: false
 }
 
-type Environment = "default" | "staging" | "prod" // what names? is it any name?
 const baseDomain = "electric-sql.com"
 
 export interface SatelliteClientOpts {
   app: string
-  env?: Environment
+  env?: string
   token: string
   host: string
   port: number
@@ -59,7 +58,7 @@ export interface SatelliteClientOpts {
 // Config spec
 export interface ElectricConfig {
   app: string
-  env?: Environment
+  env?: string
   token: string
   migrations?: Migration[],
   replication?: {

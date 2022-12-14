@@ -26,7 +26,7 @@ export const protobufPackage = "Electric.Satellite.v0_1";
  * in the replication lsn field may be left empty.
  */
 
-export enum AuthHeader {
+export enum SatAuthHeader {
   /** UNSPECIFIED - protobuff required to have this by default */
   UNSPECIFIED = 0,
   /**
@@ -60,9 +60,9 @@ export interface SatPingResp {
   lsn?: Uint8Array | undefined;
 }
 
-export interface AuthHeaderPair {
-  $type: "Electric.Satellite.v0_1.AuthHeaderPair";
-  key: AuthHeader;
+export interface SatAuthHeaderPair {
+  $type: "Electric.Satellite.v0_1.SatAuthHeaderPair";
+  key: SatAuthHeader;
   value: string;
 }
 
@@ -82,7 +82,7 @@ export interface SatAuthReq {
   /** Authentification token, auth method specific, required */
   token: string;
   /** Headers, required */
-  headers: AuthHeaderPair[];
+  headers: SatAuthHeaderPair[];
 }
 
 /** (Server) Auth response */
@@ -91,7 +91,7 @@ export interface SatAuthResp {
   /** Identity of the Server */
   id: string;
   /** Headers optional */
-  headers: AuthHeaderPair[];
+  headers: SatAuthHeaderPair[];
 }
 
 /**
@@ -109,6 +109,8 @@ export enum SatErrorResp_ErrorCode {
   AUTH_FAILED = 2,
   REPLICATION_FAILED = 3,
   INVALID_REQUEST = 4,
+  PROTO_VSN_MISSMATCH = 5,
+  SCHEMA_VSN_MISSMATCH = 6,
   UNRECOGNIZED = -1,
 }
 
@@ -362,14 +364,14 @@ export const SatPingResp = {
 
 messageTypeRegistry.set(SatPingResp.$type, SatPingResp);
 
-function createBaseAuthHeaderPair(): AuthHeaderPair {
-  return { $type: "Electric.Satellite.v0_1.AuthHeaderPair", key: 0, value: "" };
+function createBaseSatAuthHeaderPair(): SatAuthHeaderPair {
+  return { $type: "Electric.Satellite.v0_1.SatAuthHeaderPair", key: 0, value: "" };
 }
 
-export const AuthHeaderPair = {
-  $type: "Electric.Satellite.v0_1.AuthHeaderPair" as const,
+export const SatAuthHeaderPair = {
+  $type: "Electric.Satellite.v0_1.SatAuthHeaderPair" as const,
 
-  encode(message: AuthHeaderPair, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+  encode(message: SatAuthHeaderPair, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.key !== 0) {
       writer.uint32(8).int32(message.key);
     }
@@ -379,10 +381,10 @@ export const AuthHeaderPair = {
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): AuthHeaderPair {
+  decode(input: _m0.Reader | Uint8Array, length?: number): SatAuthHeaderPair {
     const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseAuthHeaderPair();
+    const message = createBaseSatAuthHeaderPair();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -400,15 +402,15 @@ export const AuthHeaderPair = {
     return message;
   },
 
-  fromPartial<I extends Exact<DeepPartial<AuthHeaderPair>, I>>(object: I): AuthHeaderPair {
-    const message = createBaseAuthHeaderPair();
+  fromPartial<I extends Exact<DeepPartial<SatAuthHeaderPair>, I>>(object: I): SatAuthHeaderPair {
+    const message = createBaseSatAuthHeaderPair();
     message.key = object.key ?? 0;
     message.value = object.value ?? "";
     return message;
   },
 };
 
-messageTypeRegistry.set(AuthHeaderPair.$type, AuthHeaderPair);
+messageTypeRegistry.set(SatAuthHeaderPair.$type, SatAuthHeaderPair);
 
 function createBaseSatAuthReq(): SatAuthReq {
   return { $type: "Electric.Satellite.v0_1.SatAuthReq", id: "", token: "", headers: [] };
@@ -425,7 +427,7 @@ export const SatAuthReq = {
       writer.uint32(18).string(message.token);
     }
     for (const v of message.headers) {
-      AuthHeaderPair.encode(v!, writer.uint32(26).fork()).ldelim();
+      SatAuthHeaderPair.encode(v!, writer.uint32(26).fork()).ldelim();
     }
     return writer;
   },
@@ -444,7 +446,7 @@ export const SatAuthReq = {
           message.token = reader.string();
           break;
         case 3:
-          message.headers.push(AuthHeaderPair.decode(reader, reader.uint32()));
+          message.headers.push(SatAuthHeaderPair.decode(reader, reader.uint32()));
           break;
         default:
           reader.skipType(tag & 7);
@@ -458,7 +460,7 @@ export const SatAuthReq = {
     const message = createBaseSatAuthReq();
     message.id = object.id ?? "";
     message.token = object.token ?? "";
-    message.headers = object.headers?.map((e) => AuthHeaderPair.fromPartial(e)) || [];
+    message.headers = object.headers?.map((e) => SatAuthHeaderPair.fromPartial(e)) || [];
     return message;
   },
 };
@@ -477,7 +479,7 @@ export const SatAuthResp = {
       writer.uint32(10).string(message.id);
     }
     for (const v of message.headers) {
-      AuthHeaderPair.encode(v!, writer.uint32(26).fork()).ldelim();
+      SatAuthHeaderPair.encode(v!, writer.uint32(26).fork()).ldelim();
     }
     return writer;
   },
@@ -493,7 +495,7 @@ export const SatAuthResp = {
           message.id = reader.string();
           break;
         case 3:
-          message.headers.push(AuthHeaderPair.decode(reader, reader.uint32()));
+          message.headers.push(SatAuthHeaderPair.decode(reader, reader.uint32()));
           break;
         default:
           reader.skipType(tag & 7);
@@ -506,7 +508,7 @@ export const SatAuthResp = {
   fromPartial<I extends Exact<DeepPartial<SatAuthResp>, I>>(object: I): SatAuthResp {
     const message = createBaseSatAuthResp();
     message.id = object.id ?? "";
-    message.headers = object.headers?.map((e) => AuthHeaderPair.fromPartial(e)) || [];
+    message.headers = object.headers?.map((e) => SatAuthHeaderPair.fromPartial(e)) || [];
     return message;
   },
 };

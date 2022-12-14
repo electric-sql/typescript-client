@@ -16,8 +16,8 @@ import {
   SatPingResp,
   SatRelation,
   SatRelationColumn,
-  AuthHeader,
-  AuthHeaderPair,
+  SatAuthHeader,
+  SatAuthHeaderPair,
 } from '../_generated/proto/satellite';
 import { getObjFromString, getSizeBuf, getTypeFromCode, SatPbMsg,
          getProtocolVersion, getFullTypeName} from '../util/proto';
@@ -185,9 +185,10 @@ export class SatelliteClient extends EventEmitter implements Client {
 
   authenticate(clientId: string): Promise<AuthResponse | SatelliteError> {
     const { token } = this.opts;
-    const headers = [ AuthHeaderPair.fromPartial({ key: AuthHeader.PROTO_VERSION,
-                                                   value: getProtocolVersion()
-                                                 }) ]
+    const headers = [ SatAuthHeaderPair.fromPartial(
+      { key: SatAuthHeader.PROTO_VERSION,
+        value: getProtocolVersion()
+      }) ]
     const request = SatAuthReq.fromPartial({ id: clientId,
                                              token: token,
                                              headers: headers

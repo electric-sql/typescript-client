@@ -32,7 +32,7 @@ export enum SatAuthHeader {
   /**
    * PROTO_VERSION - required header
    * protobuf protocol version, this version is picked from
-   * the package statement of this protobuf file, for example "v0.1"
+   * the package statement of this protobuf file, for example "Electric.Satellite.v10_13"
    */
   PROTO_VERSION = 1,
   /**

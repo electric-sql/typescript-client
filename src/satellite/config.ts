@@ -78,13 +78,13 @@ export const addDefaultsToElectricConfig = (config: ElectricConfig): ElectricCon
   const port = (config.replication?.port) ?? 443
   const insecure = (config.replication?.insecure) ?? false
 
-  config = {
+  const newConfig = {
     ...electricConfigDefaults,
     ...config
   }
-  config.replication = { ...config.replication, host, port, insecure }
+  newConfig.replication = { ...config.replication, host, port, insecure }
 
-  return config
+  return newConfig
 }
 
 

@@ -5,7 +5,7 @@ import { Notifier } from '../notifiers/index'
 import { DbName } from '../util/types'
 
 import { Satellite, Registry } from './index'
-import { satelliteDefaults, ElectricConfig, satelliteClientDefaults, validateConfig } from './config'
+import { satelliteDefaults, ElectricConfig, satelliteClientDefaults, validateConfig, SatelliteClientOpts } from './config'
 import { SatelliteProcess } from './process'
 import { SocketFactory } from '../sockets'
 import { SatelliteClient } from './client'
@@ -164,10 +164,10 @@ export class GlobalRegistry extends BaseRegistry {
       throw Error(`invalid config: ${foundErrors}`);
     }
 
-    const satelliteClientOpts = {
+    const satelliteClientOpts: SatelliteClientOpts = {
       ...satelliteClientDefaults,
       app: config.app,
-      environment: config.env,
+      env: config.env,
       token: config.token,
       host: config.replication.host,
       port: config.replication.port,

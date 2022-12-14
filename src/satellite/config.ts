@@ -73,12 +73,10 @@ const electricConfigDefaults: Partial<ElectricConfig> = {
   env: "default"
 }
 
-export const addDefaultsToElectricConfig = (config: ElectricConfig) => {
-  const makeHost = () => `${config.env}.${config.app}.${baseDomain}`
-
-  const host = (config.replication?.host) ? config.replication.host : makeHost()
-  const port = (config.replication?.port) ? config.replication.port : 443
-  const insecure = (config.replication?.insecure) ? config.replication.insecure : false
+export const addDefaultsToElectricConfig = (config: ElectricConfig): ElectricConfig => {
+  const host = (config.replication?.host) ?? `${config.env}.${config.app}.${baseDomain}`
+  const port = (config.replication?.port) ?? 443
+  const insecure = (config.replication?.insecure) ?? false
 
   config = {
     ...electricConfigDefaults,

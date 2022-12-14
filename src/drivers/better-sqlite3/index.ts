@@ -9,7 +9,7 @@ import {
 import { BundleMigrator } from '../../migrators/bundle'
 import { EventNotifier } from '../../notifiers/event'
 import { globalRegistry } from '../../satellite/registry'
-import { addDefaultsToElectricConfig, ElectricConfig } from '../../satellite/config'
+import { ElectricConfig } from '../../satellite/config'
 import { WebSocketNodeFactory } from '../../sockets/node'
 import { DbName } from '../../util/types'
 
@@ -31,8 +31,6 @@ export const electrify = async (db: Database, config: ElectricConfig, opts?: Ele
   const namespace = new ElectricNamespace(adapter, notifier)
   const electric = new ElectricDatabase(db, namespace)
 
-  const configWithDefaults = addDefaultsToElectricConfig(config)
-
-  const electrified = await baseElectrify(dbName, db, electric, adapter, migrator, notifier, socketFactory, registry, configWithDefaults)
+  const electrified = await baseElectrify(dbName, db, electric, adapter, migrator, notifier, socketFactory, registry, config)
   return electrified as unknown as ElectrifiedDatabase
 }

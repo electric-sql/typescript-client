@@ -90,35 +90,32 @@ export const addDefaultsToElectricConfig = (config: ElectricConfig) => {
 }
 
 
-export const validateConfig = (config : any) => {
+export const validateConfig = (config: any) => {
   const errors = []
-  if(!config){
+  if (!config) {
     errors.push(`config not defined: ${config}`)
     return errors
   }
-  
+
   const { app, replication } = config
-  
-  if(!app){
+
+  if (!app) {
     errors.push(`please provide an app identifier: ${config}`)
     return errors
-  }  
-  
-  if(!replication){
-    errors.push("Please provide config.replication = {address, port} details to connect to dev infra")
-    errors.push("We're still working to make ElectricSQL service live. You can join the wait list: https://console.electric-sql.com/join/waitlist")
-  } else{
-    const { address, port } = replication
+  }
 
-    if (!address) {
-      errors.push(`Please provide config.replication.address`)
+  if (replication) {
+    const { host, port } = replication
+
+    if (!host) {
+      errors.push(`Please provide config.replication.host`)
     }
     if (!port) {
       errors.push(`Please provide config.replication.port`)
     }
     if (port && typeof port != 'number') {
       errors.push(`Please provide correct type for config.replication.port`)
-    }    
+    }
   }
 
   return errors

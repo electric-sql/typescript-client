@@ -21,7 +21,7 @@ import Long from 'long'
 import { ChangeType, ConnectivityState, LSN, SqlValue, Transaction } from '../../src/util/types'
 import { relations } from './common'
 import { Satellite } from '../../src/satellite'
-import { base64, DEFAULT_LSN, numberToBytes } from '../../src/util/common'
+import { DEFAULT_LSN, numberToBytes } from '../../src/util/common'
 
 import { data as testMigrationsData } from '../support/migrations'
 import { EventNotifier } from '../../src/notifiers'
@@ -126,7 +126,7 @@ test('load metadata', async t => {
     compensations: 0,
     lastAckdRowId: '0',
     lastSentRowId: '0',
-    lsn: base64.fromBytes(DEFAULT_LSN),
+    lsn: "MA==",
     clientId: ''
   })
 })

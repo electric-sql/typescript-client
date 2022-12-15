@@ -1,10 +1,13 @@
 import * as Pb from '../_generated/proto/satellite'
 import * as _m0 from 'protobufjs/minimal';
 
+type GetName<T extends {"$type": string}> = T["$type"] extends `Electric.Satellite.v0_1.${infer K}` ? K : never
+type MappingTuples = {[k in SatPbMsg as GetName<k>]: [number, SatPbMsgObj<k['$type']>]}
+
 // NOTE: This mapping should be kept in sync with Electric message mapping.
 // Take into account that this mapping is dependent on the protobuf
 // protocol version.
-let msgtypetuples: { [k: string]: [number, any] } =
+let msgtypetuples: MappingTuples =
     {
         "SatErrorResp": [0, Pb.SatErrorResp],
         "SatAuthReq": [1, Pb.SatAuthReq],
@@ -44,8 +47,8 @@ export type SatPbMsg =
     | Pb.SatRelation
     | Pb.SatMigrationNotification
 
-export type SatPbMsgObj = {
-    $type: string;
+export type SatPbMsgObj<Type extends string = string> = {
+    $type: Type;
     encode(message: SatPbMsg, writer: _m0.Writer): _m0.Writer;
     decode(input: _m0.Reader | Uint8Array, length?: number): SatPbMsg;
     fromPartial<I extends Pb.Exact<Pb.DeepPartial<SatPbMsg>, I>>(object: I): SatPbMsg;

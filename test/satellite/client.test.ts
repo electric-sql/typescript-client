@@ -14,6 +14,8 @@ import {
   SatTransOp,
   SatAuthResp,
   SatPingResp,
+  SatInStartReplicationReq,
+  SatInStartReplicationReq_Option,
 } from '../../src/_generated/proto/satellite';
 import { WebSocketNodeFactory } from '../../src/sockets/node';
 import { SatelliteClient, serializeRow, deserializeRow } from '../../src/satellite/client';
@@ -160,6 +162,24 @@ test.serial('replication start success', async t => {
 
   await client.startReplication();
   t.pass();
+});
+
+test.serial('replication start sends FIRST_LSN', async t => {
+  await connectAndAuth(t.context as Context);
+  const { client, server } = t.context as Context;
+
+  return new Promise(async (resolve) => {
+    server.nextResponses([(data?: Buffer) => {
+      const msgType = data!.readUInt8();
+      if (msgType == getTypeFromString(SatInStartReplicationReq.$type)) {
+        const req = decode(data!) as SatInStartReplicationReq
+        t.deepEqual(req.options[0], SatInStartReplicationReq_Option.FIRST_LSN)
+        t.pass()
+        resolve()
+      }
+    }]);
+    await client.startReplication();
+  })
 });
 
 test.serial('replication start failure', async t => {

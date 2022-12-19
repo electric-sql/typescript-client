@@ -140,7 +140,15 @@ export enum SatInStartReplicationReq_Option {
    * message for every committed batch of SatOpLog messages
    */
   SYNC_MODE = 2,
+  /**
+   * FIRST_LSN - Asks receiver to start replication from the first transaction in the log
+   * without necessity to know about the actual internal format of the LSN
+   */
   FIRST_LSN = 3,
+  /**
+   * LAST_LSN - Asks receiver to start replication from the last position in the log,
+   * whatever this position is. Used for tests only.
+   */
   LAST_LSN = 4,
   UNRECOGNIZED = -1,
 }

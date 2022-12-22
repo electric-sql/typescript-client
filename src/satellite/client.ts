@@ -629,7 +629,7 @@ export function serializeRow(rec: Record, relation: Relation) : SatOpRow {
   var recordNullBitMask = new Uint8Array(calculateNumBytes(relation.columns.length))
   var recordValues = relation!.columns.reduce((acc: Uint8Array[], c: RelationColumn) => {
     if (rec[c.name] != undefined) {
-      acc.push(serializeColumnData(rec[c.name]!, c))
+      acc.push(serializeColumnData(rec[c.name]!))
     }
     else {
       acc.push(serializeNullData())
@@ -687,27 +687,26 @@ function calculateNumBytes(column_num: number): number {
 function deserializeColumnData(column: Uint8Array, columnInfo: RelationColumn): string | number {
   const columnType = columnInfo.type.toUpperCase();
   switch (columnType) {
+    case 'CHAR':
     case 'TEXT':
     case 'UUID':
     case 'VARCHAR':
       return typeDecoder.text(column);
+    case 'FLOAT4':
+    case 'FLOAT8':
     case 'INT':
+    case 'INT2':
     case 'INT4':
+    case 'INT8':
     case 'INTEGER':
       return Number(typeDecoder.text(column));
   }
   throw new SatelliteError(SatelliteErrorCode.UNKNOWN_DATA_TYPE, `can't deserialize ${columnInfo.type}`);
 }
 
-function serializeColumnData(column: string | number, columnInfo: RelationColumn): Uint8Array {
-  const columnType = columnInfo.type.toUpperCase();
-  switch (columnType) {
-    case 'TEXT':
-    case 'UUID':
-    case 'INTEGER':
-      return typeEncoder.text(column as string);
-  }
-  throw new SatelliteError(SatelliteErrorCode.UNKNOWN_DATA_TYPE, `can't serialize ${columnInfo.type}`);
+// All values serialized as textual representation
+function serializeColumnData(column: string | number): Uint8Array {
+  return typeEncoder.text(column as string);
 }
 
 function serializeNullData(): Uint8Array {

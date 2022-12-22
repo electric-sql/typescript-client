@@ -524,7 +524,6 @@ export class SatelliteClient extends EventEmitter implements Client {
           record: deserializeRow(op.insert.rowData!, rel)
         };
 
-        Log.info(`change delete: ${JSON.stringify(change)}`)
         replication.transactions[lastTxnIdx].changes.push(change);
       }
 
@@ -543,7 +542,6 @@ export class SatelliteClient extends EventEmitter implements Client {
           oldRecord: deserializeRow(op.update.oldRowData, rel)
        });
 
-        Log.info(`change update: ${JSON.stringify(change)}`)
         replication.transactions[lastTxnIdx].changes.push(change);
       }
 
@@ -561,7 +559,6 @@ export class SatelliteClient extends EventEmitter implements Client {
           oldRecord: deserializeRow(op.delete.oldRowData!, rel)
         });
 
-        Log.info(`change delete: ${JSON.stringify(change)}`)
         replication.transactions[lastTxnIdx].changes.push(change);
       }
     });

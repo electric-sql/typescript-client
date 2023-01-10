@@ -163,7 +163,7 @@ export class SatelliteClient extends EventEmitter implements Client {
 
   connect(
     retryHandler?: (error: any, attempt: number) => boolean
-  ): Promise<void | SatelliteError> {
+  ): Promise<void> {
     const connectPromise = new Promise<void>((resolve, reject) => {
       // TODO: ensure any previous socket is closed, or reject
       if (this.socket) {
@@ -231,7 +231,7 @@ export class SatelliteClient extends EventEmitter implements Client {
     return !this.socketHandler
   }
 
-  startReplication(lsn?: LSN): Promise<void | SatelliteError> {
+  startReplication(lsn?: LSN): Promise<void> {
     if (this.inbound.isReplicating != ReplicationStatus.STOPPED) {
       return Promise.reject(
         new SatelliteError(
@@ -257,7 +257,7 @@ export class SatelliteClient extends EventEmitter implements Client {
     return this.rpc(request)
   }
 
-  stopReplication(): Promise<void | SatelliteError> {
+  stopReplication(): Promise<void> {
     if (this.inbound.isReplicating != ReplicationStatus.ACTIVE) {
       return Promise.reject(
         new SatelliteError(
@@ -272,10 +272,7 @@ export class SatelliteClient extends EventEmitter implements Client {
     return this.rpc(request)
   }
 
-  authenticate({
-    clientId,
-    token,
-  }: AuthState): Promise<AuthResponse | SatelliteError> {
+  authenticate({ clientId, token }: AuthState): Promise<AuthResponse> {
     const headers = [
       SatAuthHeaderPair.fromPartial({
         key: SatAuthHeader.PROTO_VERSION,
@@ -300,7 +297,7 @@ export class SatelliteClient extends EventEmitter implements Client {
     })
   }
 
-  enqueueTransaction(transaction: Transaction): void | SatelliteError {
+  enqueueTransaction(transaction: Transaction): void {
     if (this.outbound.isReplicating != ReplicationStatus.ACTIVE) {
       throw new SatelliteError(
         SatelliteErrorCode.REPLICATION_NOT_STARTED,
@@ -750,9 +747,9 @@ export class SatelliteClient extends EventEmitter implements Client {
     this.socket.write(buffer)
   }
 
-  private async rpc<T>(request: SatPbMsg): Promise<T | SatelliteError> {
+  private async rpc<T>(request: SatPbMsg): Promise<T> {
     let waitingFor: NodeJS.Timeout
-    return new Promise<T | SatelliteError>((resolve, reject) => {
+    return new Promise<T>((resolve, reject) => {
       waitingFor = setTimeout(() => {
         console.log(`${request.$type}`)
         const error = new SatelliteError(

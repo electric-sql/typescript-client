@@ -45,7 +45,7 @@ test('exec notifies when readOnly is false', async (t) => {
 
   t.is(notifier.notifications.length, 0)
 
-  webSqlDb.exec(['drop lalas'], false, () => {})
+  webSqlDb.exec([{ sql: 'drop lalas', args: [] }], false, () => {})
 
   t.is(notifier.notifications.length, 1)
 })
@@ -56,7 +56,7 @@ test('exec does not notify when readOnly', async (t) => {
 
   t.is(notifier.notifications.length, 0)
 
-  webSqlDb.exec(['select 1'], true, () => {})
+  webSqlDb.exec([{ sql: 'select 1', args: [] }], true, () => {})
 
   t.is(notifier.notifications.length, 0)
 })

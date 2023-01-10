@@ -56,14 +56,14 @@ export interface Statement {
   db: Database
   stmt: string
 
-  bind(values: BindParams): boolean | Promise<boolean>
+  bind(values?: BindParams): boolean | Promise<boolean>
   step(): boolean | Promise<boolean>
   get(params?: BindParams, config?: Config): SqlValue[] | Promise<SqlValue[]>
   getColumnNames(): string[] | Promise<string[]>
   getAsObject(params?: BindParams, config?: Config): Row | Promise<Row>
   getSQL(): string | Promise<string>
   getNormalizedSQL(): string | Promise<string>
-  run(values: BindParams): boolean | Promise<boolean>
+  run(values?: BindParams): boolean | Promise<boolean>
   bindFromObject(valuesObj: Row): true | Promise<true>
   bindFromArray(values: SqlValue[]): true | Promise<true>
   reset(): boolean | Promise<boolean>

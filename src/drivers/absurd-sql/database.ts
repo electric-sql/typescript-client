@@ -70,7 +70,7 @@ export interface Statement {
   free(): boolean | Promise<boolean>
 }
 
-export type StatementIterator = AsyncIterator<Statement>
+export type StatementIterator = AsyncGenerator<Statement>
 
 // This is the primary wrapped database client that runs in the
 // worker thread, using SQL.js with absurd-sql.

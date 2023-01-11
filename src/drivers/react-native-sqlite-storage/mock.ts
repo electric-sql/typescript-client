@@ -57,23 +57,36 @@ export class MockDatabase extends MockSQLitePlugin implements Database {
     this.dbName = dbName
   }
 
+  attach(dbName: DbName, dbAlias: DbName): Promise<void>
+  attach(
+    dbName: DbName,
+    dbAlias: DbName,
+    success?: AnyFunction,
+    error?: AnyFunction
+  ): void
   attach(
     _dbName: DbName,
     _dbAlias: DbName,
     success?: AnyFunction,
-    _error?: AnyFunction
-  ): void {
-    if (!!success) {
+    error?: AnyFunction
+  ): void | Promise<void> {
+    if (success === undefined && error === undefined) {
+      return Promise.resolve()
+    } else if (typeof success === 'function') {
       success('mocked!')
     }
   }
 
+  detach(dbName: DbName): Promise<void>
+  detach(dbName: DbName, success?: AnyFunction, error?: AnyFunction): void
   detach(
     _dbAlias: DbName,
     success?: (...args: any[]) => any,
-    _error?: (...args: any[]) => any
-  ): void {
-    if (!!success) {
+    error?: (...args: any[]) => any
+  ): void | Promise<void> {
+    if (success === undefined && error === undefined) {
+      return Promise.resolve()
+    } else if (typeof success === 'function') {
       success('mocked!')
     }
   }

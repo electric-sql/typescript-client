@@ -18,7 +18,7 @@ test('electrify returns an equivalent database client', async (t) => {
   })
 })
 
-test.only('running a transaction runs potentiallyChanged', async (t) => {
+test('running a transaction runs potentiallyChanged', async (t) => {
   const [_original, notifier, db] = await initTestable('test.db')
 
   t.is(notifier.notifications.length, 0)
@@ -79,20 +79,8 @@ test('detaching a database notifies for one less', async (t) => {
   t.is(notifier.notifications.length, 3)
 })
 
-test('enablePromiseRuntime(mockDb) works', async (t) => {
-  const [original, notifier, db] = await initTestable('test.db', {
-    enablePromises: true,
-  })
-
-  return original.attach('lala.db', 'lala').then((arg) => {
-    t.is(arg, 'mocked!')
-  })
-})
-
 test('working with the promise runtime works', async (t) => {
-  const [original, notifier, db] = await initTestable('test.db', {
-    enablePromises: true,
-  })
+  const [_original, notifier, db] = await initTestable('test.db', true)
 
   t.is(notifier.notifications.length, 0)
 

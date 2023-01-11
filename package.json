@@ -85,8 +85,9 @@
     "dev": "tsmodule dev",
     "build": "rm -rf ./dist && tsc && tsmodule build",
     "test": "ava",
-    "pretest": "yarn build",
-    "prepublishOnly": "yarn test",
+    "typecheck": "tsc -p tsconfig.tests.json",
+    "posttest": "yarn typecheck",
+    "prepublishOnly": "yarn test && yarn typecheck",
     "lint": "eslint src --fix",
     "prepare": "husky install"
   },

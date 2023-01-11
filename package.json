@@ -89,6 +89,7 @@
     "posttest": "yarn typecheck",
     "prepublishOnly": "yarn test && yarn typecheck",
     "lint": "eslint src --fix",
+    "check-styleguide": "prettier --check --loglevel warn . && eslint src --quiet",
     "prepare": "husky install"
   },
   "ava": {

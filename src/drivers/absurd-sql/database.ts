@@ -412,7 +412,7 @@ export class MainThreadDatabaseProxy implements Database {
       }
 
       const msg =
-        `Failed to create \`${fnName}\. ` +
+        `Failed to create \`${fnName}. ` +
         `Have you added it to \`self.user_defined_functions\` ` +
         `in your worker.js?`
       throw new Error(msg)

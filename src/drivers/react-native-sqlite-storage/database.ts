@@ -99,7 +99,7 @@ export class ElectricDatabase extends ElectricSQLitePlugin {
     const successFn = (...args: any[]): any => {
       notifier.detach(dbAlias)
 
-      if (!!originalSuccessFn) {
+      if (originalSuccessFn) {
         return originalSuccessFn(...args)
       }
     }

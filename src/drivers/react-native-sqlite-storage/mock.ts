@@ -18,18 +18,18 @@ const promisablePatchedMethods: { [key: string]: boolean } = {
 export const enablePromiseRuntime = (mockDb: MockDatabase): MockDatabase => {
   return new Proxy(mockDb, {
     get(target, key, receiver) {
-      let value = Reflect.get(target, key, receiver)
+      const value = Reflect.get(target, key, receiver)
 
       if (typeof key === 'string' && key in promisablePatchedMethods) {
         const shouldReverseCallbacks = promisablePatchedMethods[key]
 
         return (...args: any): any => {
           return new Promise((resolve: AnyFunction, reject: AnyFunction) => {
-            let success = function (...args: any[]): any {
+            const success = function (...args: any[]): any {
               return resolve(...args)
             }
 
-            let error = function (err: any): any {
+            const error = function (err: any): any {
               reject(err)
               return false
             }
@@ -92,7 +92,7 @@ export class MockDatabase extends MockSQLitePlugin implements Database {
   }
 
   echoTest(success?: AnyFunction, _error?: AnyFunction): void {
-    if (!!success) {
+    if (success) {
       success('mocked!')
     }
   }

@@ -29,7 +29,7 @@ const testConfig = { app: 'app', token: 'token' }
 
 export const initTestable = async <N extends Notifier = MockNotifier>(
   dbName: DbName,
-  useWebSQLDatabase: boolean = false,
+  useWebSQLDatabase = false,
   config = testConfig,
   opts?: ElectrifyOptions
 ): RetVal<N> => {

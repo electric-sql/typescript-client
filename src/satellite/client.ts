@@ -174,13 +174,18 @@ export class SatelliteClient extends EventEmitter implements Client {
       }
       this.socket = this.socketFactory.create()
       this.socket.onceConnect(() => {
+        if (!this.socket)
+          throw new SatelliteError(
+            SatelliteErrorCode.UNEXPECTED_STATE,
+            'socket got unassigned somehow'
+          )
         this.socketHandler = (message) => this.handleIncoming(message)
         this.notifier.connectivityStateChange(this.dbName, 'connected')
-        this.socket!.onMessage(this.socketHandler)
-        this.socket!.onError(() => {
+        this.socket.onMessage(this.socketHandler)
+        this.socket.onError(() => {
           this.notifier.connectivityStateChange(this.dbName, 'error')
         })
-        this.socket!.onClose(() => {
+        this.socket.onClose(() => {
           this.notifier.connectivityStateChange(this.dbName, 'disconnected')
         })
         resolve()
@@ -785,11 +790,11 @@ export class SatelliteClient extends EventEmitter implements Client {
 }
 
 export function serializeRow(rec: Record, relation: Relation): SatOpRow {
-  var recordNumColumn = 0
-  var recordNullBitMask = new Uint8Array(
+  let recordNumColumn = 0
+  const recordNullBitMask = new Uint8Array(
     calculateNumBytes(relation.columns.length)
   )
-  var recordValues = relation!.columns.reduce(
+  const recordValues = relation!.columns.reduce(
     (acc: Uint8Array[], c: RelationColumn) => {
       if (rec[c.name] != null) {
         acc.push(serializeColumnData(rec[c.name]!))
@@ -817,7 +822,7 @@ export function deserializeRow(
   }
   return Object.fromEntries(
     relation!.columns.map((c, i) => {
-      var value
+      let value
       if (getMaskBit(row.nullsBitmask, i) == 1) {
         value = null
       } else {
@@ -878,7 +883,7 @@ function getMaskBit(array: Uint8Array, indexFromStart: number): number {
 }
 
 function calculateNumBytes(column_num: number): number {
-  let rem = column_num % 8
+  const rem = column_num % 8
   if (rem == 0) {
     return column_num / 8
   } else {

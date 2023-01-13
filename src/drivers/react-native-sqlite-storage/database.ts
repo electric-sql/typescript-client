@@ -20,15 +20,13 @@ export interface Database extends SQLitePlugin {
   ): void
   detach(dbName: DbName): Promise<void>
   detach(dbName: DbName, success?: AnyFunction, error?: AnyFunction): void
-
-  // XXX we use `echoTest` to detect whether the promises API is enabled.
-  // This could be removed if we require the user to tell us whether they've
-  // enabled it or not, e.g.: via `electrify(db, promisesEnabled: true)`.
-  echoTest(success?: AnyFunction, _error?: AnyFunction): VoidOrPromise
 }
 
 // Wrap the database client to automatically notify on commit.
-export class ElectricDatabase extends ElectricSQLitePlugin {
+export class ElectricDatabase
+  extends ElectricSQLitePlugin
+  implements Pick<Database, 'attach' | 'detach'>
+{
   // Private properties are not exposed via the proxy.
   _db: Database
   _promisesEnabled: boolean
@@ -36,15 +34,12 @@ export class ElectricDatabase extends ElectricSQLitePlugin {
   constructor(
     db: Database,
     namespace: ElectricNamespace,
-    promisesEnabled?: boolean
+    promisesEnabled: boolean
   ) {
     super(db, namespace)
 
     this._db = db
-    this._promisesEnabled =
-      promisesEnabled !== undefined
-        ? promisesEnabled
-        : this._db.echoTest() instanceof Promise
+    this._promisesEnabled = promisesEnabled
   }
 
   // The React Native plugin also supports attaching multiple databases
@@ -114,4 +109,5 @@ export class ElectricDatabase extends ElectricSQLitePlugin {
   }
 }
 
-export interface ElectrifiedDatabase extends Database, ElectricDatabase {}
+export type ElectrifiedDatabase<T extends Database = Database> = T &
+  ElectricDatabase

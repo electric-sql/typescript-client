@@ -8,13 +8,10 @@ export class DatabaseAdapter
 {
   db: Database
 
-  constructor(db: Database, promisesEnabled?: boolean) {
+  constructor(db: Database, promisesEnabled: boolean) {
     super(db)
 
     this.db = db
-    this.promisesEnabled =
-      promisesEnabled !== undefined
-        ? promisesEnabled
-        : db.echoTest() instanceof Promise
+    this.promisesEnabled = promisesEnabled
   }
 }

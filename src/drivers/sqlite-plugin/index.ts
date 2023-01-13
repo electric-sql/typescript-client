@@ -1,25 +1,32 @@
 import { ElectricNamespace } from '../../electric/index'
 import { ProxyWrapper } from '../../proxy/index'
-import {
-  AnyFunction,
-  BindParams,
-  DbName,
-  VoidOrPromise,
-} from '../../util/types'
+import { AnyFunction, BindParams } from '../../util/types'
 
 import { ensurePromise } from './promise'
+import { Results } from './results'
 export { ensurePromise }
+
+export type StatementCallback = (
+  transaction: SQLitePluginTransaction,
+  resultSet: Results
+) => void
+export type StatementErrorCallback = (
+  transaction: SQLitePluginTransaction,
+  error: any
+) => void
 
 // The common subset of the SQLitePluginTransaction interface.
 export interface SQLitePluginTransaction {
-  readOnly: boolean
-  success(...args: any[]): any
+  executeSql(
+    sql: string,
+    values?: BindParams
+  ): Promise<[SQLitePluginTransaction, Results]>
   executeSql(
     sql: string,
     values?: BindParams,
-    success?: AnyFunction,
-    error?: AnyFunction
-  ): VoidOrPromise
+    success?: StatementCallback,
+    error?: StatementErrorCallback
+  ): void
 }
 
 export type SQLitePluginTransactionFunction = (
@@ -28,32 +35,30 @@ export type SQLitePluginTransactionFunction = (
 
 // The common subset of the SQLitePlugin database client API.
 export interface SQLitePlugin {
-  databaseFeatures: {
-    isSQLitePluginDatabase: true
-  }
-  openDBs: {
-    [key: DbName]: 'INIT' | 'OPEN'
-  }
-
-  // Never promisified.
-  addTransaction(tx: SQLitePluginTransaction): void
-
   // May be promisified.
+  readTransaction(
+    txFn: SQLitePluginTransactionFunction
+  ): Promise<SQLitePluginTransaction>
   readTransaction(
     txFn: SQLitePluginTransactionFunction,
     error?: AnyFunction,
-    success?: AnyFunction
-  ): VoidOrPromise
+    success?: SQLitePluginTransactionFunction
+  ): void
+  transaction(
+    txFn: SQLitePluginTransactionFunction
+  ): Promise<SQLitePluginTransaction>
   transaction(
     txFn: SQLitePluginTransactionFunction,
     error?: AnyFunction,
-    success?: AnyFunction
-  ): VoidOrPromise
+    success?: SQLitePluginTransactionFunction
+  ): void
 }
 
 // Abstract class designed to be extended by concrete
 // implementations for Cordova and React Native.
-export abstract class ElectricSQLitePlugin implements ProxyWrapper {
+export abstract class ElectricSQLitePlugin
+  implements ProxyWrapper, Pick<SQLitePlugin, 'transaction'>
+{
   // Private properties are not exposed via the proxy.
   _db: SQLitePlugin
   _promisesEnabled?: boolean
@@ -76,36 +81,25 @@ export abstract class ElectricSQLitePlugin implements ProxyWrapper {
     return this._db
   }
 
-  addTransaction(tx: SQLitePluginTransaction): void {
-    const originalSuccessFn = tx.success.bind(tx)
-    const potentiallyChanged = this.electric.potentiallyChanged.bind(
-      this.electric
-    )
-
-    tx.success = (...args: any[]): any => {
-      if (!tx.readOnly) {
-        potentiallyChanged()
-      }
-
-      if (originalSuccessFn) {
-        originalSuccessFn(...args)
-      }
-    }
-
-    return this._db.addTransaction(tx)
-  }
-
+  transaction(
+    txFn: SQLitePluginTransactionFunction
+  ): Promise<SQLitePluginTransaction>
   transaction(
     txFn: SQLitePluginTransactionFunction,
     error?: AnyFunction,
-    success?: AnyFunction
-  ): VoidOrPromise {
-    const wrappedSuccess = (): void => {
+    success?: SQLitePluginTransactionFunction
+  ): void
+  transaction(
+    txFn: SQLitePluginTransactionFunction,
+    error?: AnyFunction,
+    success?: SQLitePluginTransactionFunction
+  ): void | Promise<SQLitePluginTransaction> {
+    const wrappedSuccess = (
+      tx: SQLitePluginTransaction
+    ): SQLitePluginTransaction => {
       this.electric.potentiallyChanged()
-
-      if (success !== undefined) {
-        success()
-      }
+      if (success !== undefined) success(tx)
+      return tx
     }
 
     if (this._promisesEnabled) {

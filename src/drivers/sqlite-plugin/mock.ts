@@ -1,24 +1,24 @@
 import { AnyFunction, BindParams, DbName } from '../../util/types'
-import { SQLitePlugin, SQLitePluginTransaction } from './index'
+import {
+  SQLitePlugin,
+  SQLitePluginTransaction,
+  StatementCallback,
+} from './index'
 import { mockResults } from './results'
 
 export abstract class MockSQLitePlugin implements SQLitePlugin {
-  databaseFeatures: {
-    isSQLitePluginDatabase: true
-  }
   openDBs: {
     [key: DbName]: 'INIT' | 'OPEN'
   }
 
   constructor(dbName: DbName) {
-    this.databaseFeatures = {
-      isSQLitePluginDatabase: true,
-    }
     this.openDBs = {}
     this.openDBs[dbName] = 'OPEN'
   }
 
-  addTransaction(tx: SQLitePluginTransaction): void {
+  private addTransaction(
+    tx: SQLitePluginTransaction & { success: AnyFunction; readOnly: boolean }
+  ): void {
     if (tx.success !== undefined) {
       const results = mockResults([{ i: 0 }])
       const arg = tx.readOnly ? [tx, results] : undefined
@@ -27,22 +27,34 @@ export abstract class MockSQLitePlugin implements SQLitePlugin {
     }
   }
 
+  readTransaction(txFn: AnyFunction): Promise<SQLitePluginTransaction>
   readTransaction(
     txFn: AnyFunction,
     _error?: AnyFunction,
     success?: AnyFunction
-  ): void {
+  ): void
+  readTransaction(
+    txFn: AnyFunction,
+    _error?: AnyFunction,
+    success?: AnyFunction
+  ): void | Promise<SQLitePluginTransaction> {
     const tx = new MockSQLitePluginTransaction(true, success)
 
     txFn(tx)
 
     this.addTransaction(tx)
   }
+  transaction(txFn: AnyFunction): Promise<SQLitePluginTransaction>
   transaction(
     txFn: AnyFunction,
     _error?: AnyFunction,
     success?: AnyFunction
-  ): void {
+  ): void
+  transaction(
+    txFn: AnyFunction,
+    _error?: AnyFunction,
+    success?: AnyFunction
+  ): void | Promise<SQLitePluginTransaction> {
     const tx = new MockSQLitePluginTransaction(false, success)
 
     txFn(tx)
@@ -91,16 +103,25 @@ export class MockSQLitePluginTransaction implements SQLitePluginTransaction {
   }
 
   executeSql(
+    sql: string,
+    values?: BindParams
+  ): Promise<[SQLitePluginTransaction, any]>
+  executeSql(
+    sql: string,
+    values?: BindParams,
+    success?: StatementCallback,
+    error?: AnyFunction
+  ): void
+  executeSql(
     _sql: string,
     _values?: BindParams,
-    success?: AnyFunction,
+    success?: StatementCallback,
     _error?: AnyFunction
-  ): void {
+  ): void | Promise<[SQLitePluginTransaction, any]> {
     if (success !== undefined) {
       const results = mockResults([{ i: 0 }])
-      const arg = this.readOnly ? [this, results] : undefined
 
-      success(arg)
+      success(this, results)
     }
   }
 }

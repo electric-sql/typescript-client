@@ -2,9 +2,13 @@ import { parseTableNames } from '../../util/parser'
 import { QualifiedTablename } from '../../util/tablename'
 import { AnyFunction, Row, Statement } from '../../util/types'
 
-import { SQLitePlugin, SQLitePluginTransaction } from './index'
+import {
+  SQLitePlugin,
+  SQLitePluginTransaction,
+  StatementCallback,
+} from './index'
 import { ensurePromise } from './promise'
-import { ExecutionResult, rowsFromResults } from './results'
+import { rowsFromResults } from './results'
 import Log from 'loglevel'
 
 export abstract class SQLitePluginDatabaseAdapter {
@@ -55,13 +59,15 @@ export abstract class SQLitePluginDatabaseAdapter {
     const readTransaction = this.db.readTransaction.bind(this.db)
 
     return new Promise((resolve: AnyFunction, reject: AnyFunction) => {
-      const success = ([_tx, results]: ExecutionResult) => {
+      const success: StatementCallback = (_tx, results) => {
         resolve(rowsFromResults(results))
       }
 
       const txFn = (tx: SQLitePluginTransaction) => {
         return promisesEnabled
-          ? ensurePromise(tx.executeSql(sql, args)).then(success).catch(reject)
+          ? ensurePromise(tx.executeSql(sql, args))
+              .then((args) => success(...args))
+              .catch(reject)
           : tx.executeSql(sql, args, success, reject)
       }
 

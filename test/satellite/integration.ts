@@ -15,9 +15,10 @@ import { Satellite } from '../../src/satellite'
 import { SatelliteClient } from '../../src/satellite/client'
 import { randomUUID } from 'crypto'
 
-import { data as testMigrationsData } from '../support/migrations'
 import { WebSocketNodeFactory } from '../../src/sockets/node'
-const { migrations } = testMigrationsData
+
+import bundle from '../support/migrations'
+const { migrations } = bundle
 
 type Context = {
   dbName: string

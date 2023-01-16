@@ -50,7 +50,7 @@ const transactionWithNotifier = <T extends VariableArgFunction>(
   txFn: Transaction<T>,
   notifier: Notifier
 ): Transaction<T> => {
-  let wrappedFn = <Transaction<T>>((...args: Parameters<T>) => {
+  const wrappedFn = <Transaction<T>>((...args: Parameters<T>) => {
     const originalReturn = txFn(...args)
     notifier.potentiallyChanged()
     return originalReturn

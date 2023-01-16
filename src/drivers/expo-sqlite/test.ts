@@ -23,7 +23,7 @@ import {
 import { MockDatabase, MockWebSQLDatabase } from './mock'
 import { MockSocketFactory } from '../../sockets/mock'
 import { MockConsoleClient } from '../../auth/mock'
-import { ElectricConfig } from '../../satellite'
+import { ElectricConfig } from '../../config'
 
 type RetVal<N extends Notifier, D extends Database = Database> = Promise<
   [D, N, ElectrifiedDatabase<D>]

@@ -142,6 +142,7 @@
     "@types/node": "^18.8.4",
     "@types/react": "^18.0.18",
     "@types/react-native-sqlite-storage": "^5.0.2",
+    "@types/react-native-uuid": "^2.0.0",
     "@types/ws": "^8.5.3",
     "@typescript-eslint/eslint-plugin": "^5.34.0",
     "@typescript-eslint/parser": "^5.34.0",

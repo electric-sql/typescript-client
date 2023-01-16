@@ -138,6 +138,7 @@
     "@tsmodule/tsmodule": "^40.0.17",
     "@types/base-64": "^1.0.0",
     "@types/better-sqlite3": "^7.6.3",
+    "@types/cordova-sqlite-storage": "^1.5.5",
     "@types/node": "^18.8.4",
     "@types/react": "^18.0.18",
     "@types/react-native-sqlite-storage": "^5.0.2",

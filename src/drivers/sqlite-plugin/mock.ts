@@ -88,20 +88,6 @@ export class MockSQLitePluginTransaction implements SQLitePluginTransaction {
     }
   }
 
-  addStatement(
-    _sql: string,
-    _values?: BindParams,
-    success?: AnyFunction,
-    _error?: AnyFunction
-  ): void {
-    if (success !== undefined) {
-      const results = mockResults([{ i: 0 }])
-      const arg = this.readOnly ? [this, results] : undefined
-
-      success(arg)
-    }
-  }
-
   executeSql(
     sql: string,
     values?: BindParams

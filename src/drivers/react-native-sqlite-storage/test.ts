@@ -54,5 +54,5 @@ export const initTestable = async <N extends Notifier = MockNotifier>(
     registry,
     config
   )
-  return [db, notifier, electrified as ElectrifiedDatabase]
+  return [db, notifier, electrified as ElectrifiedDatabase<MockDatabase>]
 }

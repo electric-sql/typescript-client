@@ -6,7 +6,7 @@ import {
   SqlValue,
   Statement,
 } from '../../util'
-import { rowsFromResults } from '../sqlite-plugin/results'
+import { rowsFromResults } from '../generic/results'
 import { Database } from './database'
 
 export class DatabaseAdapter implements DatabaseAdapterInterface {

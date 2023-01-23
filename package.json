@@ -94,8 +94,7 @@
     "prepublishOnly": "npm run test",
     "lint": "eslint src --fix",
     "check-styleguide": "prettier --check --loglevel warn . && eslint src --quiet",
-    "prepare": "husky install",
-    "prepack": "npm run build"
+    "prepare": "husky install; npm run build"
   },
   "ava": {
     "timeout": "10m",

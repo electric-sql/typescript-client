@@ -24,7 +24,7 @@ export class DatabaseAdapter implements DatabaseAdapterInterface {
         await this.db.run(stmt.sql, stmt.args)
       }
     } catch (error) {
-      await this.db.run('ABORT')
+      await this.db.run('ROLLBACK')
       open = false
     } finally {
       if (open) {

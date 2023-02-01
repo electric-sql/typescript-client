@@ -19,6 +19,7 @@ export interface ElectricConfig {
   }
   console?: {
     host: string
+    ssl: boolean
   }
   debug?: boolean
 }
@@ -34,7 +35,7 @@ export const hydrateConfig = (config: ElectricConfig): HydratedConfig => {
   const replication = { ...config.replication, host, port, ssl }
 
   const consoleHost = config.console?.host ?? `console.${domain}`
-  const consoleClient = { ...config.console, host: consoleHost }
+  const consoleClient = { host: consoleHost, ssl: config.console?.ssl ?? true }
 
   return {
     app: config.app,

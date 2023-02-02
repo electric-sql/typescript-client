@@ -118,15 +118,13 @@ class WrappedTx implements Tx {
 
   query(
     statement: Statement,
-    successCallback?: (tx: WrappedTx, res: Row[]) => void,
+    successCallback: (tx: WrappedTx, res: Row[]) => void,
     errorCallback?: (error: any) => void
   ): void {
     this.adapter
       .query(statement)
       .then((rows) => {
-        if (typeof successCallback !== 'undefined') {
-          successCallback(this, rows)
-        }
+        successCallback(this, rows)
       })
       .catch((err) => {
         this.rollback(err, errorCallback)

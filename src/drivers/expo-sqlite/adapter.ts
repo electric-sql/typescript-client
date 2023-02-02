@@ -85,7 +85,7 @@ class WrappedTx implements Tx {
 
   query(
     statement: Statement,
-    successCallback?: (tx: Tx, res: Row[]) => void,
+    successCallback: (tx: Tx, res: Row[]) => void,
     errorCallback?: (error: any) => void
   ): void {
     this.executeSQL(statement, successCallback, errorCallback)

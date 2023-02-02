@@ -36,7 +36,7 @@ export interface Transaction {
 
   query(
     statement: Statement,
-    successCallback?: (tx: Transaction, res: Row[]) => void,
+    successCallback: (tx: Transaction, res: Row[]) => void,
     errorCallback?: (error: any) => void
   ): void
 }

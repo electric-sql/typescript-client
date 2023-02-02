@@ -86,13 +86,13 @@ class WrappedTx implements Tx {
 
   query(
     { sql, args }: Statement,
-    successCallback?: (tx: WrappedTx, res: Row[]) => void,
+    successCallback: (tx: WrappedTx, res: Row[]) => void,
     errorCallback?: (error: any) => void
   ): void {
     try {
       const stmt = this.db.prepare(sql)
       const rows = stmt.all(...wrapBindParams(args))
-      if (typeof successCallback !== 'undefined') successCallback(this, rows)
+      successCallback(this, rows)
     } catch (err) {
       if (typeof errorCallback !== 'undefined') errorCallback(err)
       throw err // makes the transaction fail (needed to have consistent behavior with react-native and expo drivers which also fail if one of the statements fail)

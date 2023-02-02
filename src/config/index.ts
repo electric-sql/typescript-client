@@ -8,21 +8,10 @@ const DEFAULTS = {
   env: 'default',
 }
 
-// The mandatory data that must be included in the imported
-// `electic.json` config file, if using it.
-interface ElectricJson {
-  app: AppName
-  env: EnvName
-}
-
-interface MigrationsBundle {
-  migrations: Migration[]
-}
-
 export interface ElectricConfig {
   app: AppName
-  env?: EnvName
-  migrations?: Migration[]
+  env: EnvName
+  migrations: Migration[]
   replication?: {
     host: string
     port: number
@@ -30,22 +19,12 @@ export interface ElectricConfig {
   }
   console?: {
     host: string
+    port: number
+    ssl: boolean
   }
   debug?: boolean
 }
 export type HydratedConfig = Required<ElectricConfig>
-
-export const configure = (
-  config: ElectricJson,
-  bundle: MigrationsBundle,
-  overrides: Partial<ElectricConfig> = {}
-): ElectricConfig => {
-  return {
-    ...config,
-    ...overrides,
-    migrations: bundle.migrations,
-  }
-}
 
 export const hydrateConfig = (config: ElectricConfig): HydratedConfig => {
   const domain = DEFAULTS.domain
@@ -57,7 +36,12 @@ export const hydrateConfig = (config: ElectricConfig): HydratedConfig => {
   const replication = { ...config.replication, host, port, ssl }
 
   const consoleHost = config.console?.host ?? `console.${domain}`
-  const consoleClient = { ...config.console, host: consoleHost }
+  const consoleSsl = config.console?.ssl ?? true
+  const consoleClient = {
+    host: consoleHost,
+    ssl: consoleSsl,
+    port: config.console?.port ?? (consoleSsl ? 443 : 80),
+  }
 
   return {
     app: config.app,

@@ -1,14 +1,13 @@
 import test from 'ava'
 
-import { configure } from '../../src/config/index'
+import { ElectricConfig, hydrateConfig } from '../../src/config/index'
 
-import app from '../support/electric.json'
-import migrations from '../support/migrations'
+import configModule from '../support/.electric/@config/index'
+const config: ElectricConfig = configModule
 
 test('configure', async (t) => {
-  const config = configure(app, migrations)
-
   t.is(config.app, 'tarragon-envy-5432')
+
   if (config.migrations) {
     t.true(config.migrations.length > 0)
   } else {
@@ -16,10 +15,22 @@ test('configure', async (t) => {
   }
 })
 
-test('overrides', async (t) => {
-  const config = configure(app, migrations, {
-    app: 'badger-foo-1234',
+test('hydrate', async (t) => {
+  t.is(config.replication, undefined)
+
+  const hydrated = hydrateConfig(config)
+
+  t.deepEqual(hydrated.replication, {
+    host: 'default.tarragon-envy-5432.db.electric-sql.com',
+    port: 443,
+    ssl: true,
   })
 
-  t.is(config.app, 'badger-foo-1234')
+  t.deepEqual(hydrated.console, {
+    host: 'console.electric-sql.com',
+    port: 443,
+    ssl: true,
+  })
+
+  t.false(hydrated.debug)
 })

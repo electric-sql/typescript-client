@@ -29,7 +29,7 @@ export class DatabaseAdapter implements DatabaseAdapterInterface {
     } catch (error) {
       await this.db.run('ROLLBACK')
       open = false
-      throw error // further propagate the error, will reject the promise
+      throw error // rejects the promise with the reason for the rollback
     } finally {
       if (open) {
         await this.db.run('COMMIT')

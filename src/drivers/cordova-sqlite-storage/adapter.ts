@@ -49,14 +49,17 @@ export class DatabaseAdapter implements DatabaseAdapterInterface {
     })
   }
 
-  transaction(f: (_tx: Tx) => void): Promise<void> {
+  transaction<T>(
+    f: (_tx: Tx, setResult: (res: T) => void) => void
+  ): Promise<T | void> {
+    let result: T | void = undefined
     return new Promise<void>((resolve, reject) => {
       const txFn = (tx: SQLitePlugin.Transaction) => {
-        f(new WrappedTx(tx))
+        f(new WrappedTx(tx), (res) => (result = res))
       }
 
-      this.db.transaction(txFn, reject, () => resolve())
-    })
+      this.db.transaction(txFn, reject, resolve)
+    }).then(() => result)
   }
 
   query({ sql, args }: Statement): Promise<Row[]> {

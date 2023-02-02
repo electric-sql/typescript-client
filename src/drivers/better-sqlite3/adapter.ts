@@ -31,9 +31,13 @@ export class DatabaseAdapter implements DatabaseAdapterInterface {
     txn(statements)
   }
 
-  async transaction(f: (_tx: Tx) => void): Promise<void> {
+  async transaction<T>(
+    f: (_tx: Tx, setResult: (res: T) => void) => void
+  ): Promise<T | void> {
+    let result: T | void = undefined
     const txn = this.db.transaction(f)
-    txn(new WrappedTx(this.db))
+    txn(new WrappedTx(this.db), (res) => (result = res))
+    return result
   }
 
   // Promise interface, but impl not actually async

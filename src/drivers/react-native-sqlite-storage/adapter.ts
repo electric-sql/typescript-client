@@ -5,6 +5,7 @@ import {
   Transaction as Tx,
 } from '../../electric/adapter'
 import {
+  AnyFunction,
   parseTableNames,
   QualifiedTablename,
   Row,
@@ -58,14 +59,17 @@ export class DatabaseAdapter implements DatabaseAdapterInterface {
     })
   }
 
-  transaction(f: (_tx: Tx) => void): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
+  transaction<T>(
+    f: (_tx: Tx, setResult: (res: T) => void) => void
+  ): Promise<T | void> {
+    let result: T | void = undefined
+    return new Promise((resolve: AnyFunction, reject: AnyFunction) => {
       const txFn = (tx: Transaction) => {
-        f(new WrappedTx(tx))
+        f(new WrappedTx(tx), (res) => (result = res))
       }
 
       this.db.transaction(txFn, reject, () => resolve())
-    })
+    }).then(() => result)
   }
 
   query({ sql, args }: Statement): Promise<Row[]> {

@@ -37,7 +37,9 @@ export class DatabaseAdapter implements DatabaseAdapterInterface {
     }
   }
 
-  transaction(f: (_tx: Tx) => void): Promise<void> {
+  transaction<T>(
+    f: (_tx: Tx, setResult: (res: T) => void) => void
+  ): Promise<T | void> {
     return new Promise((resolve, reject) => {
       this.run({ sql: 'BEGIN' })
         .then(() => {
@@ -48,8 +50,14 @@ export class DatabaseAdapter implements DatabaseAdapterInterface {
           // which at that point is not possible since we already committed.
           // This can be avoided if we were able to `await` the execution of `f` but that would require `f` to return a promise.
           // Promisifying the transaction is not possible because promises are not compatible with the cordova-sqlite-storage, react-native-sqlite-storage, and expo-sqlite drivers.
-          const wrappedTx = new WrappedTx(this, () => resolve(), reject)
-          f(wrappedTx)
+          const wrappedTx = new WrappedTx(this, reject)
+          f(wrappedTx, (res) => {
+            // Commit the transaction when the user sets the result.
+            // This assumes that the user does not execute any more queries after setting the result.
+            this.run({ sql: 'COMMIT' })
+              .then(() => resolve(res))
+              .catch(reject)
+          })
         })
         .catch(reject)
     })
@@ -73,20 +81,8 @@ export class DatabaseAdapter implements DatabaseAdapterInterface {
 class WrappedTx implements Tx {
   constructor(
     private adapter: DatabaseAdapter,
-    private resolve: () => void,
     private reject: (reason?: any) => void
   ) {}
-
-  private commit() {
-    this.adapter
-      .run({ sql: 'COMMIT' })
-      .then(() => {
-        this.resolve()
-      })
-      .catch((err) => {
-        this.reject(err)
-      })
-  }
 
   private rollback(err: any, errorCallback?: (error: any) => void) {
     const invokeErrorCallbackAndReject = () => {
@@ -111,12 +107,8 @@ class WrappedTx implements Tx {
     this.adapter
       .run(statement)
       .then(() => {
-        if (typeof successCallback !== 'undefined') successCallback(this)
-        // maybe also do commit here when there is no more success callback, and always require to use the success callback do to remaining queries
-        else {
-          // If there is no success callback we are at the end of the transaction
-          // hence, we commit the transaction
-          this.commit()
+        if (typeof successCallback !== 'undefined') {
+          successCallback(this)
         }
       })
       .catch((err) => {
@@ -132,11 +124,8 @@ class WrappedTx implements Tx {
     this.adapter
       .query(statement)
       .then((rows) => {
-        if (typeof successCallback !== 'undefined') successCallback(this, rows)
-        else {
-          // If there is no success callback we are at the end of the transaction
-          // hence, we commit the transaction
-          this.commit()
+        if (typeof successCallback !== 'undefined') {
+          successCallback(this, rows)
         }
       })
       .catch((err) => {

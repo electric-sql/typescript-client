@@ -111,10 +111,8 @@ class Transaction implements Tx {
     this.adapter
       .run(statement)
       .then(() => {
-        if (typeof successCallback !== 'undefined')
-          successCallback(
-            this
-          ) // maybe also do commit here when there is no more success callback, and always require to use the success callback do to remaining queries
+        if (typeof successCallback !== 'undefined') successCallback(this)
+        // maybe also do commit here when there is no more success callback, and always require to use the success callback do to remaining queries
         else {
           // If there is no success callback we are at the end of the transaction
           // hence, we commit the transaction

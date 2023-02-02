@@ -48,7 +48,7 @@ export class DatabaseAdapter implements DatabaseAdapterInterface {
           // which at that point is not possible since we already committed.
           // This can be avoided if we were able to `await` the execution of `f` but that would require `f` to return a promise.
           // Promisifying the transaction is not possible because promises are not compatible with the cordova-sqlite-storage, react-native-sqlite-storage, and expo-sqlite drivers.
-          const wrappedTx = new Transaction(this, () => resolve(), reject)
+          const wrappedTx = new WrappedTx(this, () => resolve(), reject)
           f(wrappedTx)
         })
         .catch(reject)
@@ -70,7 +70,7 @@ export class DatabaseAdapter implements DatabaseAdapterInterface {
   }
 }
 
-class Transaction implements Tx {
+class WrappedTx implements Tx {
   constructor(
     private adapter: DatabaseAdapter,
     private resolve: () => void,
@@ -105,7 +105,7 @@ class Transaction implements Tx {
 
   run(
     statement: Statement,
-    successCallback?: (tx: Transaction) => void,
+    successCallback?: (tx: WrappedTx) => void,
     errorCallback?: (error: any) => void
   ): void {
     this.adapter
@@ -126,7 +126,7 @@ class Transaction implements Tx {
 
   query(
     statement: Statement,
-    successCallback?: (tx: Transaction, res: Row[]) => void,
+    successCallback?: (tx: WrappedTx, res: Row[]) => void,
     errorCallback?: (error: any) => void
   ): void {
     this.adapter

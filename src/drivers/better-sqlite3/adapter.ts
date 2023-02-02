@@ -33,7 +33,7 @@ export class DatabaseAdapter implements DatabaseAdapterInterface {
 
   async transaction(f: (_tx: Tx) => void): Promise<void> {
     const txn = this.db.transaction(f)
-    txn(new Transaction(this.db))
+    txn(new WrappedTx(this.db))
   }
 
   // Promise interface, but impl not actually async
@@ -62,12 +62,12 @@ function wrapBindParams(x: BindParams | undefined): StatementBindParams {
   }
 }
 
-class Transaction implements Tx {
+class WrappedTx implements Tx {
   constructor(private db: Database) {}
 
   run(
     { sql, args }: Statement,
-    successCallback?: (tx: Transaction) => void,
+    successCallback?: (tx: WrappedTx) => void,
     errorCallback?: (error: any) => void
   ): void {
     try {
@@ -82,7 +82,7 @@ class Transaction implements Tx {
 
   query(
     { sql, args }: Statement,
-    successCallback?: (tx: Transaction, res: Row[]) => void,
+    successCallback?: (tx: WrappedTx, res: Row[]) => void,
     errorCallback?: (error: any) => void
   ): void {
     try {

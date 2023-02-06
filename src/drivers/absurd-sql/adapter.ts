@@ -10,6 +10,7 @@ import { Row, Statement } from '../../util/types'
 
 import { Database } from './database'
 import { resultToRows } from './result'
+import { isInsertUpdateOrDeleteStatement } from '../../util/statements'
 
 export class DatabaseAdapter implements DatabaseAdapterInterface {
   db: Database
@@ -28,7 +29,10 @@ export class DatabaseAdapter implements DatabaseAdapterInterface {
       open = true
       for (const stmt of statements) {
         await this.db.run(stmt.sql, stmt.args)
-        rowsAffected += await this.db.getRowsModified() // `getRowsModified` returns the number of rows modified by the last insert, update, or delete statement.
+        if (isInsertUpdateOrDeleteStatement(stmt.sql)) {
+          // Fetch the number of rows affected by the last insert, update, or delete
+          rowsAffected += await this.db.getRowsModified()
+        }
       }
       return {
         rowsAffected: rowsAffected,

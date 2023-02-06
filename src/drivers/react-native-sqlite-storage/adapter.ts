@@ -15,6 +15,7 @@ import {
 import { ensurePromise } from '../generic/promise'
 import { rowsFromResults } from '../generic/results'
 import { Database, StatementCallback, Transaction } from './database'
+import { isInsertUpdateOrDeleteStatement } from '../../util/statements'
 
 export class DatabaseAdapter implements DatabaseAdapterInterface {
   constructor(public db: Database, private promisesEnabled: boolean = false) {}
@@ -44,8 +45,14 @@ export class DatabaseAdapter implements DatabaseAdapterInterface {
           tx.executeSql(
             sql,
             args,
-            (_, res) => {
-              rowsAffected += res.rowsAffected
+            (tx2, _res) => {
+              if (isInsertUpdateOrDeleteStatement(sql)) {
+                // Fetch the number of rows affected by the last insert, update, or delete
+                // Fetch it manually because `_res.affectedRows` is wrong
+                tx2.executeSql('SELECT changes()', undefined, (_, res) => {
+                  rowsAffected += res.rows.length
+                })
+              }
             },
             stmtFailure
           )

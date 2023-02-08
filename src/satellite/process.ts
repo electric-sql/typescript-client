@@ -787,7 +787,7 @@ export class SatelliteProcess implements Satellite {
       await this.adapter.runInTransaction({ sql, args })
     } else {
       this._lastSentRowId = lsn
-      await this.adapter.runInTransaction({ sql, args })
+      await this.adapter.run({ sql, args })
     }
   }
 

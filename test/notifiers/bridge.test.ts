@@ -6,6 +6,7 @@ import {
   ServerMethod,
   WorkerClient,
 } from '../../src/bridge/index'
+import { ChangeNotification } from '../../src/notifiers'
 import { MainThreadBridgeNotifier } from '../../src/notifiers/bridge'
 
 const makeWorker = () => {
@@ -46,11 +47,11 @@ const initMethod: ServerMethod = { target: 'server', name: 'init' }
 const openMethod: ServerMethod = { target: 'server', name: 'open' }
 const getTestData: ServerMethod = { target: 'server', name: '_get_test_data' }
 
-const callActuallyChanged: NotifyMethod = {
+const callActuallyChanged = {
   target: 'notify',
   dbName: 'test.db',
   name: 'actuallyChanged',
-}
+} as const
 
 test('server is notified about potential data changes', async (t) => {
   const [client, notifier] = await setupWorker()
@@ -65,7 +66,7 @@ test('server is notified about potential data changes', async (t) => {
 test('client is notified about actual data changes', async (t) => {
   const [client, notifier] = await setupBridge()
 
-  const notifications = []
+  const notifications: ChangeNotification[] = []
 
   notifier.subscribeToDataChanges((x) => {
     notifications.push(x)

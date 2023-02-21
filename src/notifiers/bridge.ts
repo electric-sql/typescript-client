@@ -43,7 +43,7 @@ export class MainThreadBridgeNotifier
       target: 'notify',
     }
 
-    this.workerClient.notify(method, notification)
+    this.workerClient.notify(method, notification.dbName)
 
     return notification
   }

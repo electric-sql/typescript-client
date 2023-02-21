@@ -37,6 +37,12 @@ export class MainThreadBridgeNotifier
   override _emitPotentialChange(dbName: DbName): PotentialChangeNotification {
     const notification = super._emitPotentialChange(dbName)
 
+    // below we use `satisfies` to ensure that the method satisfies NotifyMethod,
+    // without assigning the more general `NotifyMethod` type to this constant.
+    // This way we keep the type of `method` as precise as possible (thanks to type inference).
+    // It is important to keep it precise, because if it would be just `NotifyMethod`
+    // then we could call `notify` with a parameter list that matches one of the methods of `EventNotifier`
+    // but not necessarily the one we are targetting (i.e. the parameter list for the method that corresponds to `method.name`)
     const method = {
       dbName: dbName,
       name: '_emitPotentialChange',

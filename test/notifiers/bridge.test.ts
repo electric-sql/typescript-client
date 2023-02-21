@@ -1,11 +1,7 @@
 import test from 'ava'
 import Worker from 'web-worker'
 
-import {
-  NotifyMethod,
-  ServerMethod,
-  WorkerClient,
-} from '../../src/bridge/index'
+import { ServerMethod, WorkerClient } from '../../src/bridge/index'
 import { ChangeNotification } from '../../src/notifiers'
 import { MainThreadBridgeNotifier } from '../../src/notifiers/bridge'
 

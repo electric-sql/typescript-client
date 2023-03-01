@@ -10,11 +10,14 @@ declare interface VFSOptions {
 }
 
 declare module 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js' {
-  interface IDBBatchAtomicVFS extends SQLiteVFS {
-    // dummy field needed to avoid that ESLint complains about:
-    //   An interface declaring no members is equivalent to its supertype.(@typescript-eslint/no-empty-interface)
-    _shutup_ts: never
-  }
+  // Declare that the IDBBatchAtomicVFS class implements SQLiteVFS
+  // without having to re-declare the entire SQLiteVFS interface here.
+  // Can be done by merging the class declaration with the interface declaration
+  // as explained in this post:
+  // https://stackoverflow.com/questions/52930536/typescript-declare-class-implementing-interface
+
+  /* eslint-disable @typescript-eslint/no-empty-interface */
+  interface IDBBatchAtomicVFS extends SQLiteVFS {}
   export class IDBBatchAtomicVFS {
     constructor(idbDatabaseName: string, options?: VFSOptions)
   }

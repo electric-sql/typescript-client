@@ -134,7 +134,7 @@
     "react-native-uuid": "^2.0.1",
     "sqlite-parser": "^1.0.1",
     "uuid": "^9.0.0",
-    "wa-sqlite": "rhashimoto/wa-sqlite#breaking-changes",
+    "wa-sqlite": "git+https://github.com/rhashimoto/wa-sqlite#breaking-changes",
     "walkjs": "^3.2.4",
     "ws": "^8.8.1"
   },

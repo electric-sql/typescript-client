@@ -1,6 +1,5 @@
 // Import the asynchronous WASM build because we will be using IndexedDB
 // which is an async Virtual File System (VFS).
-// @ts-ignore
 import SQLiteAsyncESMFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs'
 
 import * as SQLite from 'wa-sqlite'
@@ -9,7 +8,6 @@ import * as SQLite from 'wa-sqlite'
 // It is preferrable over OPFS because OPFS works only in a worker
 // and is not yet supported on all browsers
 // see: https://github.com/rhashimoto/wa-sqlite/tree/master/src/examples
-// @ts-ignore
 import { IDBBatchAtomicVFS } from 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js'
 
 import { SqlValue, Statement } from '../../util'

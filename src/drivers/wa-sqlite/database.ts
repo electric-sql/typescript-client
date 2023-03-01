@@ -58,7 +58,12 @@ export class Database {
     const stmt = prepared.stmt
     try {
       if (typeof statement.args !== 'undefined') {
-        this.sqlite3.bind_collection(stmt, statement.args)
+        this.sqlite3.bind_collection(
+          stmt,
+          statement.args as
+            | { [index: string]: SQLiteCompatibleType }
+            | SQLiteCompatibleType[]
+        )
       }
 
       const rows: SqlValue[][] = []

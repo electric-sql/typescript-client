@@ -1,5 +1,5 @@
 import { DatabaseAdapter } from './adapter'
-import { Database } from './database'
+import { ElectricDatabase } from './database'
 import { ElectricConfig, hydrateConfig } from '../../config'
 import { ElectricNamespace, ElectrifyOptions } from '../../electric'
 import { EventNotifier } from '../../notifiers'
@@ -10,7 +10,7 @@ import { BundleMigrator } from '../../migrators'
 import { setLogLevel } from '../../util/debug'
 
 export { DatabaseAdapter }
-export type { Database }
+export type { ElectricDatabase }
 
 export const start = async (
   dbName: string,
@@ -18,7 +18,7 @@ export const start = async (
   config: ElectricConfig,
   opts?: ElectrifyOptions
 ) => {
-  const db = await Database.init(dbName, sqliteDistPath)
+  const db = await ElectricDatabase.init(dbName, sqliteDistPath)
   const configWithDefaults = hydrateConfig(config)
 
   const adapter = opts?.adapter || new DatabaseAdapter(db)

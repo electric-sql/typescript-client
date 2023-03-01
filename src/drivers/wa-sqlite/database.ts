@@ -13,7 +13,7 @@ import * as SQLite from 'wa-sqlite'
 import { IDBBatchAtomicVFS } from 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js'
 
 import { SqlValue, Statement } from '../../util'
-import { QueryExecResult } from '../absurd-sql'
+import { QueryExecResult } from '../absurd-sql/database'
 
 import { Mutex } from 'async-mutex'
 
@@ -22,7 +22,12 @@ const emptyResult = {
   values: [],
 }
 
-export class Database {
+export interface Database {
+  exec(statement: Statement): Promise<QueryExecResult>
+  getRowsModified(): number
+}
+
+export class ElectricDatabase implements Database {
   // TODO: this mutex is no longer strictly needed because we do the necessary locking in the adapter
   //       but it may nevertheless be good to leave these locks as an extra guard in case someone would
   //       use this database directly (that could still lead to problems wrt concurrent transactions though)
@@ -108,6 +113,6 @@ export class Database {
     // see: https://rhashimoto.github.io/wa-sqlite/docs/interfaces/SQLiteAPI.html#open_v2
     const db = await sqlite3.open_v2(dbName)
 
-    return new Database(sqlite3, db)
+    return new ElectricDatabase(sqlite3, db)
   }
 }

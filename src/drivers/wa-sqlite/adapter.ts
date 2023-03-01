@@ -5,7 +5,7 @@ import {
 } from '../../electric/adapter'
 import { Database } from './database'
 import { parseTableNames, QualifiedTablename, Row, Statement } from '../../util'
-import { resultToRows } from '../absurd-sql'
+import { resultToRows } from '../absurd-sql/result'
 import { isInsertUpdateOrDeleteStatement } from '../../util/statements'
 import { Mutex } from 'async-mutex'
 

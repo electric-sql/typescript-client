@@ -203,7 +203,6 @@ export class EventNotifier implements Notifier {
       return
     }
 
-    console.log(`emit connectivity status ${status}`)
     this._emitConnectivityStatus(dbName, status)
   }
 

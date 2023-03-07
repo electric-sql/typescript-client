@@ -1,11 +1,10 @@
 import {
   DatabaseAdapter as DatabaseAdapterInterface,
   RunResult,
+  TableNameImpl,
   Transaction as Tx,
 } from '../../electric/adapter'
 
-import { parseTableNames } from '../../util/parser'
-import { QualifiedTablename } from '../../util/tablename'
 import {
   Statement as DbStatement,
   Row,
@@ -15,10 +14,14 @@ import {
 
 import { Database, StatementBindParams } from './database'
 
-export class DatabaseAdapter implements DatabaseAdapterInterface {
+export class DatabaseAdapter
+  extends TableNameImpl
+  implements DatabaseAdapterInterface
+{
   db: Database
 
   constructor(db: Database) {
+    super()
     this.db = db
   }
 
@@ -58,10 +61,6 @@ export class DatabaseAdapter implements DatabaseAdapterInterface {
   async query({ sql, args }: DbStatement): Promise<Row[]> {
     const stmt = this.db.prepare(sql)
     return stmt.all(...wrapBindParams(args))
-  }
-
-  tableNames({ sql }: Statement): QualifiedTablename[] {
-    return parseTableNames(sql)
   }
 }
 

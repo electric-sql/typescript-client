@@ -85,7 +85,6 @@ export class DatabaseAdapter
     const prepared = await this.db.prepare(statement.sql)
     await prepared.run(statement.args ? statement.args : [])
     const rowsAffected = await this.db.getRowsModified()
-
     return {
       rowsAffected: rowsAffected,
     }

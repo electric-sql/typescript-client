@@ -26,14 +26,11 @@ export interface Database {
 }
 
 export class ElectricDatabase implements Database {
-  // TODO: this mutex is no longer strictly needed because we do the necessary locking in the adapter
-  //       but it may nevertheless be good to leave these locks as an extra guard in case someone would
-  //       use this database directly (that could still lead to problems wrt concurrent transactions though)
   mutex: Mutex
 
   // Do not use this constructor directly.
   // Create a Database instance using the static `init` method instead.
-  constructor(private sqlite3: SQLiteAPI, private db: number) {
+  private constructor(private sqlite3: SQLiteAPI, private db: number) {
     this.mutex = new Mutex()
   }
 

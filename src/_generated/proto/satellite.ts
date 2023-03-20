@@ -7,7 +7,7 @@ export const protobufPackage = "Electric.Satellite.v0_2";
 
 /**
  * This file defines protobuf protocol for Satellite <> Electric replication
- * Messages are send other the wire in the following format:
+ * Messages are sent other the wire in the following format:
  *
  * Size:32, MsgType:8, Msg/binary
  *

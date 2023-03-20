@@ -218,7 +218,7 @@ message SatOpDelete {
 }
 
 // Message is send when server is migrated while client is still connected It's
-// up to the client to do immediately performa migration or stop replication
+// up to the client to immediately perform a migration or stop replication
 // stream if it's ongoing.
 message SatMigrationNotification {
     // all fields are required

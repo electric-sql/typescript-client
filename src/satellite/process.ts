@@ -463,6 +463,9 @@ export class SatelliteProcess implements Satellite {
 
     const transactions = toTransactions(results, this.relations)
     for (const txn of transactions) {
+      console.log('to send:')
+      console.log(transactions)
+      console.log('//')
       return this.client.enqueueTransaction(txn)
     }
   }
@@ -526,6 +529,11 @@ export class SatelliteProcess implements Satellite {
       ...stmts,
       ...this._enableTriggers(tablenames)
     )
+
+    const shadow = await this._getOplogShadowEntry(undefined)
+    console.log('shadow after merge:')
+    console.log(shadow)
+    console.log('//')
   }
 
   async _getEntries(since?: number): Promise<OplogEntry[]> {

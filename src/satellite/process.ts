@@ -368,19 +368,17 @@ export class SatelliteProcess implements Satellite {
         }
       })
     }
+    await Promise.all(promises)
 
     if (!this.client.isClosed()) {
       const { enqueued } = this.client.getOutboundLogPositions()
       const enqueuedLogPos = bytesToNumber(enqueued)
 
       // TODO: take next N transactions instead of all
-      const promise = this._getEntries(enqueuedLogPos).then((missing) =>
+      await this._getEntries(enqueuedLogPos).then((missing) =>
         this._replicateSnapshotChanges(missing)
       )
-      promises.push(promise)
     }
-
-    await Promise.all(promises)
     return timestamp
   }
 

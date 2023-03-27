@@ -621,18 +621,8 @@ test('local (INSERT -> UPDATE -> DELETE) with remote equivalent', async (t) => {
   const { adapter, runMigrations, satellite, tableInfo } = t.context as any
   await runMigrations()
   await satellite._setAuthState()
-
-  let stmts: Statement[] = []
-
-  // For this key we will choose remote Tx, such that: Local TM > Remote TX
-  stmts.push({
-    sql: `INSERT INTO parent (id, value, other) VALUES (?, ?, ?);`,
-    args: ['1', 'local', null],
-  })
-  await adapter.runInTransaction(...stmts)
-
-  const txDate1 = await satellite._performSnapshot()
   const clientId = satellite['_authState']['clientId']
+  let txDate1 = new Date().getTime()
 
   const insertEntry = generateRemoteOplogEntry(
     tableInfo,
@@ -640,7 +630,21 @@ test('local (INSERT -> UPDATE -> DELETE) with remote equivalent', async (t) => {
     'parent',
     OPTYPES.update,
     txDate1,
-    genEncodedTags(clientId, [txDate1]),
+    genEncodedTags('remote', [txDate1]),
+    {
+      id: 1,
+      value: 'local',
+    },
+    undefined
+  )
+
+  const deleteEntry = generateRemoteOplogEntry(
+    tableInfo,
+    'main',
+    'parent',
+    OPTYPES.delete,
+    txDate1 + 1,
+    genEncodedTags('remote', []),
     {
       id: 1,
       value: 'local',
@@ -656,17 +660,16 @@ test('local (INSERT -> UPDATE -> DELETE) with remote equivalent', async (t) => {
       namespace: 'main',
       tablename: 'parent',
       primaryKey: 1,
-      tags: genEncodedTags(clientId, [txDate1]),
+      tags: genEncodedTags('remote', [txDate1]),
     },
   ]
   t.deepEqual(shadow, expectedShadow)
   console.log(shadow)
 
-  stmts = [{ sql: `DELETE FROM parent WHERE id = 1` }]
-  await adapter.runInTransaction(...stmts)
-  const txDate2 = await satellite._performSnapshot()
+  await satellite._apply([deleteEntry], clientId)
 
   shadow = await satellite._getOplogShadowEntry()
+
   console.log(shadow)
 
   let entries = await satellite._getEntries(0)

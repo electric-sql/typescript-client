@@ -616,3 +616,60 @@ test('origin tx (INSERT) concurrently with local txses (INSERT -> DELETE)', asyn
   const expectedUserTable = [{ id: 2, value: 'local', other: null }]
   t.deepEqual(expectedUserTable, userTable)
 })
+
+test('local (INSERT -> UPDATE -> DELETE) with remote equivalent', async (t) => {
+  const { runMigrations, satellite, tableInfo } = t.context as any
+  await runMigrations()
+  await satellite._setAuthState()
+  const clientId = satellite['_authState']['clientId']
+  let txDate1 = new Date().getTime()
+
+  const insertEntry = generateRemoteOplogEntry(
+    tableInfo,
+    'main',
+    'parent',
+    OPTYPES.update,
+    txDate1,
+    genEncodedTags('remote', [txDate1]),
+    {
+      id: 1,
+      value: 'local',
+    },
+    undefined
+  )
+
+  const deleteEntry = generateRemoteOplogEntry(
+    tableInfo,
+    'main',
+    'parent',
+    OPTYPES.delete,
+    txDate1 + 1,
+    genEncodedTags('remote', []),
+    {
+      id: 1,
+      value: 'local',
+    },
+    undefined
+  )
+
+  await satellite._apply([insertEntry], clientId)
+
+  let shadow = await satellite._getOplogShadowEntry()
+  const expectedShadow = [
+    {
+      namespace: 'main',
+      tablename: 'parent',
+      primaryKey: 1,
+      tags: genEncodedTags('remote', [txDate1]),
+    },
+  ]
+  t.deepEqual(shadow, expectedShadow)
+
+  await satellite._apply([deleteEntry], clientId)
+
+  shadow = await satellite._getOplogShadowEntry()
+  t.deepEqual([], shadow)
+
+  let entries = await satellite._getEntries(0)
+  t.deepEqual([], entries)
+})

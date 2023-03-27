@@ -348,6 +348,9 @@ export class SatelliteProcess implements Satellite {
         } else {
           oplogEntry.clearTags = shadowEntry.tags
         }
+        console.log('clear_tags')
+        console.log(oplogEntry.clearTags)
+        console.log('//')
 
         if (oplogEntry.optype == OPTYPES.delete) {
           shadowEntry.tags = shadowTagsDefault
@@ -487,6 +490,10 @@ export class SatelliteProcess implements Satellite {
       incoming_origin,
       incoming
     )
+
+    console.log('merged:')
+    console.log(merged)
+    console.log('//')
 
     const stmts: Statement[] = []
     // switches off on transaction commit/abort

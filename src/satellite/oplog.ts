@@ -279,7 +279,7 @@ export const fromTransaction = (
       timestamp: new Date(
         transaction.commit_timestamp.toNumber()
       ).toISOString(), // TODO: check precision
-      clearTags: shadowTagsDefault,
+      clearTags: encodeTags(t.tags),
     }
   })
 }

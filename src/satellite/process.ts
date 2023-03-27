@@ -176,8 +176,8 @@ export class SatelliteProcess implements Satellite {
 
     const lsnBase64 = await this._getMeta('lsn')
     if (lsnBase64 && lsnBase64.length > 0) {
-      Log.info(`retrieved lsn ${this._lsn}`)
       this._lsn = base64.toBytes(lsnBase64)
+      Log.info(`retrieved lsn ${this._lsn}`)
     } else {
       Log.info(`no lsn retrieved from store`)
     }

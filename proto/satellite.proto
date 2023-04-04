@@ -264,3 +264,47 @@ message SatOpRow {
     // check nulls_bitmask to differentiate between the two
     repeated bytes values = 2;
 }
+
+// A migration message, originating in Postgres, captured via event triggers,
+// propated to electric, converted from postgres to the equivalent sqlite
+// statement and inserted into the replication stream
+//
+// Each migration message includes the sql strings to execute on the satellite
+// client as well as metadata information about the resulting structure of the
+// changed tables.
+message SatMigration {
+    enum Type {
+        CREATE_TABLE = 0;
+        CREATE_INDEX = 1;
+        ALTER_ADD_COLUMN = 6;
+    }
+    message Stmt {
+        Type type = 1;
+        string sql = 2;
+    }
+    message Column {
+        string name = 1;
+        string sqlite_type = 2;
+        string pg_type = 3;
+    }
+    message ForeignKey {
+        // the columns in the child table that point to the parent
+        repeated string fk_cols = 1;
+        // the parent table
+        string pk_table = 2;
+        // the cols in the parent table
+        repeated string pk_cols = 3;
+    }
+    message Table {
+        string name = 1;
+        repeated Column columns = 2;
+        repeated ForeignKey fks = 3;
+    }
+    // the migration version as specified by the developer and put into
+    // the postgresql migration as an electric function call
+    string version = 1;
+    // a list of sql ddl statements to apply, converted from the pg originals
+    repeated Stmt stmts = 2;
+    // a list of the table definitions resulting from applying these migrations
+    repeated Table tables = 3;
+}

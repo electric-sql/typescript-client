@@ -357,11 +357,24 @@ export interface SatMigration_Stmt {
   sql: string;
 }
 
+export interface SatMigration_PgColumnType {
+  $type: "Electric.Satellite.v1_1.SatMigration.PgColumnType";
+  /** the pg type name, e.g. int4, char */
+  name: string;
+  /**
+   * array dimensions, or [] for scalar types
+   * e.g. for a column declared as int4[][3], size = [-1, 3]
+   */
+  array: number[];
+  /** any size information, e.g. for varchar(SIZE) or [] for no size */
+  size: number[];
+}
+
 export interface SatMigration_Column {
   $type: "Electric.Satellite.v1_1.SatMigration.Column";
   name: string;
   sqliteType: string;
-  pgType: string;
+  pgType: SatMigration_PgColumnType | undefined;
 }
 
 export interface SatMigration_ForeignKey {
@@ -379,6 +392,7 @@ export interface SatMigration_Table {
   name: string;
   columns: SatMigration_Column[];
   fks: SatMigration_ForeignKey[];
+  pks: string[];
 }
 
 function createBaseSatPingReq(): SatPingReq {
@@ -1699,8 +1713,85 @@ export const SatMigration_Stmt = {
 
 messageTypeRegistry.set(SatMigration_Stmt.$type, SatMigration_Stmt);
 
+function createBaseSatMigration_PgColumnType(): SatMigration_PgColumnType {
+  return { $type: "Electric.Satellite.v1_1.SatMigration.PgColumnType", name: "", array: [], size: [] };
+}
+
+export const SatMigration_PgColumnType = {
+  $type: "Electric.Satellite.v1_1.SatMigration.PgColumnType" as const,
+
+  encode(message: SatMigration_PgColumnType, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    writer.uint32(18).fork();
+    for (const v of message.array) {
+      writer.int32(v);
+    }
+    writer.ldelim();
+    writer.uint32(26).fork();
+    for (const v of message.size) {
+      writer.int32(v);
+    }
+    writer.ldelim();
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): SatMigration_PgColumnType {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSatMigration_PgColumnType();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.name = reader.string();
+          break;
+        case 2:
+          if ((tag & 7) === 2) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.array.push(reader.int32());
+            }
+          } else {
+            message.array.push(reader.int32());
+          }
+          break;
+        case 3:
+          if ((tag & 7) === 2) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.size.push(reader.int32());
+            }
+          } else {
+            message.size.push(reader.int32());
+          }
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+
+  create<I extends Exact<DeepPartial<SatMigration_PgColumnType>, I>>(base?: I): SatMigration_PgColumnType {
+    return SatMigration_PgColumnType.fromPartial(base ?? {});
+  },
+
+  fromPartial<I extends Exact<DeepPartial<SatMigration_PgColumnType>, I>>(object: I): SatMigration_PgColumnType {
+    const message = createBaseSatMigration_PgColumnType();
+    message.name = object.name ?? "";
+    message.array = object.array?.map((e) => e) || [];
+    message.size = object.size?.map((e) => e) || [];
+    return message;
+  },
+};
+
+messageTypeRegistry.set(SatMigration_PgColumnType.$type, SatMigration_PgColumnType);
+
 function createBaseSatMigration_Column(): SatMigration_Column {
-  return { $type: "Electric.Satellite.v1_1.SatMigration.Column", name: "", sqliteType: "", pgType: "" };
+  return { $type: "Electric.Satellite.v1_1.SatMigration.Column", name: "", sqliteType: "", pgType: undefined };
 }
 
 export const SatMigration_Column = {
@@ -1713,8 +1804,8 @@ export const SatMigration_Column = {
     if (message.sqliteType !== "") {
       writer.uint32(18).string(message.sqliteType);
     }
-    if (message.pgType !== "") {
-      writer.uint32(26).string(message.pgType);
+    if (message.pgType !== undefined) {
+      SatMigration_PgColumnType.encode(message.pgType, writer.uint32(26).fork()).ldelim();
     }
     return writer;
   },
@@ -1733,7 +1824,7 @@ export const SatMigration_Column = {
           message.sqliteType = reader.string();
           break;
         case 3:
-          message.pgType = reader.string();
+          message.pgType = SatMigration_PgColumnType.decode(reader, reader.uint32());
           break;
         default:
           reader.skipType(tag & 7);
@@ -1751,7 +1842,9 @@ export const SatMigration_Column = {
     const message = createBaseSatMigration_Column();
     message.name = object.name ?? "";
     message.sqliteType = object.sqliteType ?? "";
-    message.pgType = object.pgType ?? "";
+    message.pgType = (object.pgType !== undefined && object.pgType !== null)
+      ? SatMigration_PgColumnType.fromPartial(object.pgType)
+      : undefined;
     return message;
   },
 };
@@ -1818,7 +1911,7 @@ export const SatMigration_ForeignKey = {
 messageTypeRegistry.set(SatMigration_ForeignKey.$type, SatMigration_ForeignKey);
 
 function createBaseSatMigration_Table(): SatMigration_Table {
-  return { $type: "Electric.Satellite.v1_1.SatMigration.Table", name: "", columns: [], fks: [] };
+  return { $type: "Electric.Satellite.v1_1.SatMigration.Table", name: "", columns: [], fks: [], pks: [] };
 }
 
 export const SatMigration_Table = {
@@ -1833,6 +1926,9 @@ export const SatMigration_Table = {
     }
     for (const v of message.fks) {
       SatMigration_ForeignKey.encode(v!, writer.uint32(26).fork()).ldelim();
+    }
+    for (const v of message.pks) {
+      writer.uint32(34).string(v!);
     }
     return writer;
   },
@@ -1853,6 +1949,9 @@ export const SatMigration_Table = {
         case 3:
           message.fks.push(SatMigration_ForeignKey.decode(reader, reader.uint32()));
           break;
+        case 4:
+          message.pks.push(reader.string());
+          break;
         default:
           reader.skipType(tag & 7);
           break;
@@ -1870,6 +1969,7 @@ export const SatMigration_Table = {
     message.name = object.name ?? "";
     message.columns = object.columns?.map((e) => SatMigration_Column.fromPartial(e)) || [];
     message.fks = object.fks?.map((e) => SatMigration_ForeignKey.fromPartial(e)) || [];
+    message.pks = object.pks?.map((e) => e) || [];
     return message;
   },
 };

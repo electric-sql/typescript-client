@@ -299,6 +299,7 @@ message SatMigration {
         string name = 1;
         repeated Column columns = 2;
         repeated ForeignKey fks = 3;
+        repeated string pks = 4;
     }
     // the migration version as specified by the developer and put into
     // the postgresql migration as an electric function call

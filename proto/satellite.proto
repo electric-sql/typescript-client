@@ -23,7 +23,7 @@ syntax = "proto3";
 // MAJOR version when incompatible API changes are introduced
 // MINOR version when functionality or bugfix in a backwards compatible manner
 // are introduced.
-package Electric.Satellite.v1_1;
+package Electric.Satellite.v1_2;
 
 // Ping request. Can be send by any party
 message SatPingReq{
@@ -170,6 +170,7 @@ message SatRelation {
 // Transactions are guranteed not to be mixed, and will folllow one by one.
 message SatOpLog {
     repeated SatTransOp ops = 1;
+    bool is_migration = 2;
 }
 
 // (Producer) Single operation, should be only send as part of the SatOplog

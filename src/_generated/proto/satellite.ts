@@ -215,12 +215,12 @@ export interface SatOpLog {
  */
 export interface SatTransOp {
   $type: "Electric.Satellite.v1_2.SatTransOp";
-  begin: SatOpBegin | undefined;
-  commit: SatOpCommit | undefined;
-  update: SatOpUpdate | undefined;
-  insert: SatOpInsert | undefined;
-  delete: SatOpDelete | undefined;
-  migrate: SatOpMigrate | undefined;
+  begin?: SatOpBegin | undefined;
+  commit?: SatOpCommit | undefined;
+  update?: SatOpUpdate | undefined;
+  insert?: SatOpInsert | undefined;
+  delete?: SatOpDelete | undefined;
+  migrate?: SatOpMigrate | undefined;
 }
 
 /**
@@ -431,6 +431,10 @@ export const SatPingReq = {
     return message;
   },
 
+  create<I extends Exact<DeepPartial<SatPingReq>, I>>(base?: I): SatPingReq {
+    return SatPingReq.fromPartial(base ?? {});
+  },
+
   fromPartial<I extends Exact<DeepPartial<SatPingReq>, I>>(_: I): SatPingReq {
     const message = createBaseSatPingReq();
     return message;
@@ -469,6 +473,10 @@ export const SatPingResp = {
       }
     }
     return message;
+  },
+
+  create<I extends Exact<DeepPartial<SatPingResp>, I>>(base?: I): SatPingResp {
+    return SatPingResp.fromPartial(base ?? {});
   },
 
   fromPartial<I extends Exact<DeepPartial<SatPingResp>, I>>(object: I): SatPingResp {
@@ -516,6 +524,10 @@ export const SatAuthHeaderPair = {
       }
     }
     return message;
+  },
+
+  create<I extends Exact<DeepPartial<SatAuthHeaderPair>, I>>(base?: I): SatAuthHeaderPair {
+    return SatAuthHeaderPair.fromPartial(base ?? {});
   },
 
   fromPartial<I extends Exact<DeepPartial<SatAuthHeaderPair>, I>>(object: I): SatAuthHeaderPair {
@@ -572,6 +584,10 @@ export const SatAuthReq = {
     return message;
   },
 
+  create<I extends Exact<DeepPartial<SatAuthReq>, I>>(base?: I): SatAuthReq {
+    return SatAuthReq.fromPartial(base ?? {});
+  },
+
   fromPartial<I extends Exact<DeepPartial<SatAuthReq>, I>>(object: I): SatAuthReq {
     const message = createBaseSatAuthReq();
     message.id = object.id ?? "";
@@ -621,6 +637,10 @@ export const SatAuthResp = {
     return message;
   },
 
+  create<I extends Exact<DeepPartial<SatAuthResp>, I>>(base?: I): SatAuthResp {
+    return SatAuthResp.fromPartial(base ?? {});
+  },
+
   fromPartial<I extends Exact<DeepPartial<SatAuthResp>, I>>(object: I): SatAuthResp {
     const message = createBaseSatAuthResp();
     message.id = object.id ?? "";
@@ -661,6 +681,10 @@ export const SatErrorResp = {
       }
     }
     return message;
+  },
+
+  create<I extends Exact<DeepPartial<SatErrorResp>, I>>(base?: I): SatErrorResp {
+    return SatErrorResp.fromPartial(base ?? {});
   },
 
   fromPartial<I extends Exact<DeepPartial<SatErrorResp>, I>>(object: I): SatErrorResp {
@@ -730,6 +754,10 @@ export const SatInStartReplicationReq = {
     return message;
   },
 
+  create<I extends Exact<DeepPartial<SatInStartReplicationReq>, I>>(base?: I): SatInStartReplicationReq {
+    return SatInStartReplicationReq.fromPartial(base ?? {});
+  },
+
   fromPartial<I extends Exact<DeepPartial<SatInStartReplicationReq>, I>>(object: I): SatInStartReplicationReq {
     const message = createBaseSatInStartReplicationReq();
     message.lsn = object.lsn ?? new Uint8Array();
@@ -767,6 +795,10 @@ export const SatInStartReplicationResp = {
     return message;
   },
 
+  create<I extends Exact<DeepPartial<SatInStartReplicationResp>, I>>(base?: I): SatInStartReplicationResp {
+    return SatInStartReplicationResp.fromPartial(base ?? {});
+  },
+
   fromPartial<I extends Exact<DeepPartial<SatInStartReplicationResp>, I>>(_: I): SatInStartReplicationResp {
     const message = createBaseSatInStartReplicationResp();
     return message;
@@ -801,6 +833,10 @@ export const SatInStopReplicationReq = {
     return message;
   },
 
+  create<I extends Exact<DeepPartial<SatInStopReplicationReq>, I>>(base?: I): SatInStopReplicationReq {
+    return SatInStopReplicationReq.fromPartial(base ?? {});
+  },
+
   fromPartial<I extends Exact<DeepPartial<SatInStopReplicationReq>, I>>(_: I): SatInStopReplicationReq {
     const message = createBaseSatInStopReplicationReq();
     return message;
@@ -833,6 +869,10 @@ export const SatInStopReplicationResp = {
       }
     }
     return message;
+  },
+
+  create<I extends Exact<DeepPartial<SatInStopReplicationResp>, I>>(base?: I): SatInStopReplicationResp {
+    return SatInStopReplicationResp.fromPartial(base ?? {});
   },
 
   fromPartial<I extends Exact<DeepPartial<SatInStopReplicationResp>, I>>(_: I): SatInStopReplicationResp {
@@ -879,6 +919,10 @@ export const SatRelationColumn = {
       }
     }
     return message;
+  },
+
+  create<I extends Exact<DeepPartial<SatRelationColumn>, I>>(base?: I): SatRelationColumn {
+    return SatRelationColumn.fromPartial(base ?? {});
   },
 
   fromPartial<I extends Exact<DeepPartial<SatRelationColumn>, I>>(object: I): SatRelationColumn {
@@ -954,6 +998,10 @@ export const SatRelation = {
     return message;
   },
 
+  create<I extends Exact<DeepPartial<SatRelation>, I>>(base?: I): SatRelation {
+    return SatRelation.fromPartial(base ?? {});
+  },
+
   fromPartial<I extends Exact<DeepPartial<SatRelation>, I>>(object: I): SatRelation {
     const message = createBaseSatRelation();
     message.schemaName = object.schemaName ?? "";
@@ -1003,6 +1051,10 @@ export const SatOpLog = {
       }
     }
     return message;
+  },
+
+  create<I extends Exact<DeepPartial<SatOpLog>, I>>(base?: I): SatOpLog {
+    return SatOpLog.fromPartial(base ?? {});
   },
 
   fromPartial<I extends Exact<DeepPartial<SatOpLog>, I>>(object: I): SatOpLog {
@@ -1083,6 +1135,10 @@ export const SatTransOp = {
       }
     }
     return message;
+  },
+
+  create<I extends Exact<DeepPartial<SatTransOp>, I>>(base?: I): SatTransOp {
+    return SatTransOp.fromPartial(base ?? {});
   },
 
   fromPartial<I extends Exact<DeepPartial<SatTransOp>, I>>(object: I): SatTransOp {
@@ -1167,6 +1223,10 @@ export const SatOpBegin = {
     return message;
   },
 
+  create<I extends Exact<DeepPartial<SatOpBegin>, I>>(base?: I): SatOpBegin {
+    return SatOpBegin.fromPartial(base ?? {});
+  },
+
   fromPartial<I extends Exact<DeepPartial<SatOpBegin>, I>>(object: I): SatOpBegin {
     const message = createBaseSatOpBegin();
     message.commitTimestamp = (object.commitTimestamp !== undefined && object.commitTimestamp !== null)
@@ -1230,6 +1290,10 @@ export const SatOpCommit = {
     return message;
   },
 
+  create<I extends Exact<DeepPartial<SatOpCommit>, I>>(base?: I): SatOpCommit {
+    return SatOpCommit.fromPartial(base ?? {});
+  },
+
   fromPartial<I extends Exact<DeepPartial<SatOpCommit>, I>>(object: I): SatOpCommit {
     const message = createBaseSatOpCommit();
     message.commitTimestamp = (object.commitTimestamp !== undefined && object.commitTimestamp !== null)
@@ -1285,6 +1349,10 @@ export const SatOpInsert = {
       }
     }
     return message;
+  },
+
+  create<I extends Exact<DeepPartial<SatOpInsert>, I>>(base?: I): SatOpInsert {
+    return SatOpInsert.fromPartial(base ?? {});
   },
 
   fromPartial<I extends Exact<DeepPartial<SatOpInsert>, I>>(object: I): SatOpInsert {
@@ -1356,6 +1424,10 @@ export const SatOpUpdate = {
     return message;
   },
 
+  create<I extends Exact<DeepPartial<SatOpUpdate>, I>>(base?: I): SatOpUpdate {
+    return SatOpUpdate.fromPartial(base ?? {});
+  },
+
   fromPartial<I extends Exact<DeepPartial<SatOpUpdate>, I>>(object: I): SatOpUpdate {
     const message = createBaseSatOpUpdate();
     message.relationId = object.relationId ?? 0;
@@ -1414,6 +1486,10 @@ export const SatOpDelete = {
       }
     }
     return message;
+  },
+
+  create<I extends Exact<DeepPartial<SatOpDelete>, I>>(base?: I): SatOpDelete {
+    return SatOpDelete.fromPartial(base ?? {});
   },
 
   fromPartial<I extends Exact<DeepPartial<SatOpDelete>, I>>(object: I): SatOpDelete {
@@ -1485,6 +1561,10 @@ export const SatMigrationNotification = {
     return message;
   },
 
+  create<I extends Exact<DeepPartial<SatMigrationNotification>, I>>(base?: I): SatMigrationNotification {
+    return SatMigrationNotification.fromPartial(base ?? {});
+  },
+
   fromPartial<I extends Exact<DeepPartial<SatMigrationNotification>, I>>(object: I): SatMigrationNotification {
     const message = createBaseSatMigrationNotification();
     message.oldSchemaVersion = object.oldSchemaVersion ?? "";
@@ -1533,6 +1613,10 @@ export const SatOpRow = {
       }
     }
     return message;
+  },
+
+  create<I extends Exact<DeepPartial<SatOpRow>, I>>(base?: I): SatOpRow {
+    return SatOpRow.fromPartial(base ?? {});
   },
 
   fromPartial<I extends Exact<DeepPartial<SatOpRow>, I>>(object: I): SatOpRow {
@@ -1589,6 +1673,10 @@ export const SatOpMigrate = {
     return message;
   },
 
+  create<I extends Exact<DeepPartial<SatOpMigrate>, I>>(base?: I): SatOpMigrate {
+    return SatOpMigrate.fromPartial(base ?? {});
+  },
+
   fromPartial<I extends Exact<DeepPartial<SatOpMigrate>, I>>(object: I): SatOpMigrate {
     const message = createBaseSatOpMigrate();
     message.version = object.version ?? "";
@@ -1638,6 +1726,10 @@ export const SatOpMigrate_Stmt = {
       }
     }
     return message;
+  },
+
+  create<I extends Exact<DeepPartial<SatOpMigrate_Stmt>, I>>(base?: I): SatOpMigrate_Stmt {
+    return SatOpMigrate_Stmt.fromPartial(base ?? {});
   },
 
   fromPartial<I extends Exact<DeepPartial<SatOpMigrate_Stmt>, I>>(object: I): SatOpMigrate_Stmt {
@@ -1712,6 +1804,10 @@ export const SatOpMigrate_PgColumnType = {
     return message;
   },
 
+  create<I extends Exact<DeepPartial<SatOpMigrate_PgColumnType>, I>>(base?: I): SatOpMigrate_PgColumnType {
+    return SatOpMigrate_PgColumnType.fromPartial(base ?? {});
+  },
+
   fromPartial<I extends Exact<DeepPartial<SatOpMigrate_PgColumnType>, I>>(object: I): SatOpMigrate_PgColumnType {
     const message = createBaseSatOpMigrate_PgColumnType();
     message.name = object.name ?? "";
@@ -1765,6 +1861,10 @@ export const SatOpMigrate_Column = {
       }
     }
     return message;
+  },
+
+  create<I extends Exact<DeepPartial<SatOpMigrate_Column>, I>>(base?: I): SatOpMigrate_Column {
+    return SatOpMigrate_Column.fromPartial(base ?? {});
   },
 
   fromPartial<I extends Exact<DeepPartial<SatOpMigrate_Column>, I>>(object: I): SatOpMigrate_Column {
@@ -1822,6 +1922,10 @@ export const SatOpMigrate_ForeignKey = {
       }
     }
     return message;
+  },
+
+  create<I extends Exact<DeepPartial<SatOpMigrate_ForeignKey>, I>>(base?: I): SatOpMigrate_ForeignKey {
+    return SatOpMigrate_ForeignKey.fromPartial(base ?? {});
   },
 
   fromPartial<I extends Exact<DeepPartial<SatOpMigrate_ForeignKey>, I>>(object: I): SatOpMigrate_ForeignKey {
@@ -1883,6 +1987,10 @@ export const SatOpMigrate_Table = {
       }
     }
     return message;
+  },
+
+  create<I extends Exact<DeepPartial<SatOpMigrate_Table>, I>>(base?: I): SatOpMigrate_Table {
+    return SatOpMigrate_Table.fromPartial(base ?? {});
   },
 
   fromPartial<I extends Exact<DeepPartial<SatOpMigrate_Table>, I>>(object: I): SatOpMigrate_Table {
